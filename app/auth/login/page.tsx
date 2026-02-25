@@ -10,11 +10,17 @@ import { authService } from "@/services/auth.service"
 
 export default function Page() {
   const router = useRouter()
-
   const [correo, setCorreo] = useState("")
   const [clave, setClave] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const getSafeNextPath = () => {
+    if (typeof window === "undefined") return "/"
+
+    const nextPath = new URLSearchParams(window.location.search).get("next")
+    return nextPath && nextPath.startsWith("/") ? nextPath : "/"
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,7 +29,7 @@ export default function Page() {
 
     try {
       const result = await authService.login({
-        correo,
+        correo: correo.trim().toLowerCase(),
         clave,
       })
 
@@ -32,11 +38,15 @@ export default function Page() {
         return
       }
 
-      // Si todo salió bien, redirigimos al área protegida
-      router.push("/") // ajusta según tu ruta protected
+      await authService.getProfile()
+      router.replace(getSafeNextPath())
 
-    } catch (err: any) {
-      setError(err.message || "Error inesperado")
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || "Error inesperado")
+      } else {
+        setError("Error inesperado")
+      }
     } finally {
       setLoading(false)
     }
