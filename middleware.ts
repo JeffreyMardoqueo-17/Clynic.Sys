@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { canAccessPath, normalizeRole } from "@/lib/authorization"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -30,6 +31,13 @@ export async function middleware(request: NextRequest) {
     })
 
     if (response.ok) {
+      const profile = (await response.json()) as { rol?: string | number }
+      const role = normalizeRole(profile?.rol)
+
+      if (!authPath && !canAccessPath(role, pathname)) {
+        return NextResponse.redirect(new URL("/401", request.url))
+      }
+
       if (authPath) {
         return NextResponse.redirect(new URL("/", request.url))
       }

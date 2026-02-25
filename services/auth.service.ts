@@ -1,34 +1,19 @@
 // services/auth.service.ts
 
-import { LoginDto, AuthResponseDto, UsuarioResponseDto } from "@/types/auth";
+import {
+  LoginDto,
+  AuthResponseDto,
+  UsuarioResponseDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  ChangePasswordDto,
+} from "@/types/auth";
+import { getApiErrorMessage, getApiUrl } from "@/services/api.utils";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
-type ApiErrorResponse = {
+type ApiMessageResponse = {
   mensaje?: string;
+  message?: string;
 };
-
-function getApiUrl() {
-  if (!API_URL) {
-    throw new Error("NEXT_PUBLIC_API_URL no está configurada");
-  }
-
-  return API_URL;
-}
-
-async function readErrorMessage(response: Response, fallbackMessage: string) {
-  try {
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      const errorResult: ApiErrorResponse = await response.json();
-      return errorResult?.mensaje || fallbackMessage;
-    }
-  } catch {
-    // ignored
-  }
-
-  return fallbackMessage;
-}
 
 export const authService = {
   async login(data: LoginDto): Promise<AuthResponseDto> {
@@ -40,20 +25,27 @@ export const authService = {
       body: JSON.stringify(data),
       credentials: "include", // importante al usar cookies httpOnly
     });
+    const responseClone = response.clone();
 
     let result: AuthResponseDto = {
       exito: false,
       mensaje: "Error en el login",
     };
+    let raw: Record<string, unknown> = {};
 
     try {
-      result = (await response.json()) as AuthResponseDto;
+      raw = (await response.json()) as Record<string, unknown>;
+      result = raw as AuthResponseDto;
     } catch {
       // ignored
     }
 
     if (!response.ok) {
-      throw new Error(result.mensaje || "Error en el login");
+      throw new Error(
+        result.mensaje ||
+          (typeof raw.message === "string" ? raw.message : "") ||
+          (await getApiErrorMessage(responseClone, "Error en el login"))
+      );
     }
 
     return result;
@@ -68,20 +60,27 @@ export const authService = {
       body: JSON.stringify(data),
       credentials: "include",
     });
+    const responseClone = response.clone();
 
     let result: AuthResponseDto = {
       exito: false,
       mensaje: "Error en el registro",
     };
+    let raw: Record<string, unknown> = {};
 
     try {
-      result = (await response.json()) as AuthResponseDto;
+      raw = (await response.json()) as Record<string, unknown>;
+      result = raw as AuthResponseDto;
     } catch {
       // ignored
     }
 
     if (!response.ok) {
-      throw new Error(result.mensaje || "Error en el registro");
+      throw new Error(
+        result.mensaje ||
+          (typeof raw.message === "string" ? raw.message : "") ||
+          (await getApiErrorMessage(responseClone, "Error en el registro"))
+      );
     }
 
     return result;
@@ -98,7 +97,7 @@ export const authService = {
     });
 
     if (!response.ok) {
-      throw new Error(await readErrorMessage(response, "Error al obtener el perfil"));
+      throw new Error(await getApiErrorMessage(response, "Error al obtener el perfil"));
     }
 
     return response.json();
@@ -106,6 +105,63 @@ export const authService = {
 
   async GetProfile(): Promise<UsuarioResponseDto> {
     return this.getProfile();
+  },
+
+  async forgotPassword(data: ForgotPasswordDto): Promise<string> {
+    const response = await fetch(`${getApiUrl()}/auth/forgot-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+
+    const result = (await response.json().catch(() => ({}))) as ApiMessageResponse;
+
+    if (!response.ok) {
+      throw new Error(result.mensaje || result.message || (await getApiErrorMessage(response, "No se pudo enviar el código de recuperación")));
+    }
+
+    return result.mensaje || result.message || "Si el correo existe, recibirás un código de verificación";
+  },
+
+  async resetPassword(data: ResetPasswordDto): Promise<string> {
+    const response = await fetch(`${getApiUrl()}/auth/reset-password`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+
+    const result = (await response.json().catch(() => ({}))) as ApiMessageResponse;
+
+    if (!response.ok) {
+      throw new Error(result.mensaje || result.message || (await getApiErrorMessage(response, "No se pudo restablecer la contraseña")));
+    }
+
+    return result.mensaje || result.message || "Contraseña actualizada exitosamente";
+  },
+
+  async changePassword(userId: number, data: ChangePasswordDto): Promise<string> {
+    const response = await fetch(`${getApiUrl()}/api/Usuarios/${userId}/cambiar-clave`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+
+    const result = (await response.json().catch(() => ({}))) as ApiMessageResponse;
+
+    if (!response.ok) {
+      throw new Error(result.mensaje || result.message || (await getApiErrorMessage(response, "No se pudo cambiar la contraseña")));
+    }
+
+    return result.mensaje || result.message || "Clave actualizada exitosamente";
   },
 
   async logout() {
