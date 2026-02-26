@@ -13,6 +13,7 @@ export function normalizeRole(role: unknown): AppRole {
 }
 
 const routeRules: Array<{ prefix: string; roles: AppRole[] }> = [
+  { prefix: "/agendar-cita", roles: ["Admin", "Doctor", "Recepcionista"] },
   { prefix: "/doctors", roles: ["Admin"] },
   { prefix: "/branches", roles: ["Admin"] },
   { prefix: "/services", roles: ["Admin"] },

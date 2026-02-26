@@ -74,7 +74,17 @@ export const sucursalService = {
   },
 
   async obtenerPorClinica(idClinica: number): Promise<SucursalResponseDto[]> {
-    const sucursales = await this.obtenerTodas()
-    return sucursales.filter((s) => s.idClinica === idClinica)
+    const response = await fetch(`${getApiUrl()}/Sucursales/clinica/${idClinica}`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "Error al obtener sucursales por clínica"))
+    }
+
+    const result = (await response.json()) as RawSucursal[]
+    return result.map(mapSucursal)
   },
 }

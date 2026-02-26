@@ -36,9 +36,9 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   }, [])
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="h-svh overflow-hidden">
       <AppSidebar role={usuario?.rol} />
-      <SidebarInset className="min-h-0 overflow-hidden">
+      <SidebarInset className="h-full min-h-0 overflow-hidden">
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           <header className="border-border bg-background/95 sticky top-0 z-20 flex h-14 items-center justify-between border-b px-4 backdrop-blur">
             <SidebarTrigger />
@@ -59,7 +59,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
           </header>
 
           <main className="min-h-0 flex-1 overflow-hidden p-3 md:p-4">
-            <div className="bg-card border-border h-full overflow-auto rounded-xl border p-4 md:p-5">
+            <div className="bg-card border-border h-full min-h-0 overflow-y-auto overflow-x-hidden rounded-xl border p-4 md:p-5">
               {showForceChangeAlert && (
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <StatusAlert
