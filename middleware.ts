@@ -7,9 +7,18 @@ function isAuthPath(pathname: string) {
   return pathname.startsWith("/auth")
 }
 
+function isPublicPath(pathname: string) {
+  return pathname === "/agendar-cita" || pathname.startsWith("/agendar-cita/")
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
   const authPath = isAuthPath(pathname)
+  const publicPath = isPublicPath(pathname)
+
+  if (publicPath) {
+    return NextResponse.next()
+  }
 
   if (!API_URL) {
     if (authPath) {

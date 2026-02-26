@@ -1,7 +1,5 @@
-export default function DashboardPage() {
-  return (
-    <div className="space-y-6">
-    ESTOY EN LAS CITAS
-    </div>
-  )
+import { AppointmentManagement } from "@/app/(protected)/appointment/components/appointment-management"
+
+export default function AppointmentPage() {
+  return <AppointmentManagement />
 }

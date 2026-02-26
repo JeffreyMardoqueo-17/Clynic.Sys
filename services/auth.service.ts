@@ -35,7 +35,7 @@ export const authService = {
 
     try {
       raw = (await response.json()) as Record<string, unknown>;
-      result = raw as AuthResponseDto;
+      result = raw as unknown as AuthResponseDto;
     } catch {
       // ignored
     }
@@ -70,7 +70,7 @@ export const authService = {
 
     try {
       raw = (await response.json()) as Record<string, unknown>;
-      result = raw as AuthResponseDto;
+      result = raw as unknown as AuthResponseDto;
     } catch {
       // ignored
     }
