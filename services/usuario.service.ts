@@ -1,5 +1,5 @@
 import { getApiErrorMessage, getApiUrl } from "@/services/api.utils"
-import { CreateTrabajadorDto, UsuarioResponseDto } from "@/types/usuario"
+import { CreateTrabajadorDto, UpdateTrabajadorDto, UsuarioResponseDto } from "@/types/usuario"
 
 type RawUsuario = {
   id?: number
@@ -43,8 +43,13 @@ function mapUsuario(raw: RawUsuario): UsuarioResponseDto {
 }
 
 export const usuarioService = {
-  async obtenerPorClinica(idClinica: number): Promise<UsuarioResponseDto[]> {
-    const response = await fetch(`${getApiUrl()}/api/Usuarios/clinica/${idClinica}`, {
+  async obtenerPorClinica(idClinica: number, nombre?: string): Promise<UsuarioResponseDto[]> {
+    const params = new URLSearchParams()
+    if (nombre?.trim()) {
+      params.set("nombre", nombre.trim())
+    }
+
+    const response = await fetch(`${getApiUrl()}/api/Usuarios/clinica/${idClinica}${params.toString() ? `?${params.toString()}` : ""}`, {
       method: "GET",
       credentials: "include",
       cache: "no-store",
@@ -76,8 +81,13 @@ export const usuarioService = {
     return mapUsuario(result)
   },
 
-  async obtenerPorClinicaYSucursal(idClinica: number, idSucursal: number): Promise<UsuarioResponseDto[]> {
-    const response = await fetch(`${getApiUrl()}/api/Usuarios/clinica/${idClinica}/sucursal/${idSucursal}`, {
+  async obtenerPorClinicaYSucursal(idClinica: number, idSucursal: number, nombre?: string): Promise<UsuarioResponseDto[]> {
+    const params = new URLSearchParams()
+    if (nombre?.trim()) {
+      params.set("nombre", nombre.trim())
+    }
+
+    const response = await fetch(`${getApiUrl()}/api/Usuarios/clinica/${idClinica}/sucursal/${idSucursal}${params.toString() ? `?${params.toString()}` : ""}`, {
       method: "GET",
       credentials: "include",
       cache: "no-store",
@@ -89,5 +99,57 @@ export const usuarioService = {
 
     const result = (await response.json()) as RawUsuario[]
     return result.map(mapUsuario)
+  },
+
+  async obtenerInactivosPorClinica(idClinica: number, idSucursal?: number, nombre?: string): Promise<UsuarioResponseDto[]> {
+    const params = new URLSearchParams()
+    if (idSucursal && idSucursal > 0) {
+      params.set("idSucursal", String(idSucursal))
+    }
+    if (nombre?.trim()) {
+      params.set("nombre", nombre.trim())
+    }
+
+    const response = await fetch(`${getApiUrl()}/api/Usuarios/clinica/${idClinica}/inactivos${params.toString() ? `?${params.toString()}` : ""}`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "Error al obtener trabajadores inactivos"))
+    }
+
+    const result = (await response.json()) as RawUsuario[]
+    return result.map(mapUsuario)
+  },
+
+  async actualizar(id: number, data: UpdateTrabajadorDto): Promise<UsuarioResponseDto> {
+    const response = await fetch(`${getApiUrl()}/api/Usuarios/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "Error al actualizar trabajador"))
+    }
+
+    const result = (await response.json()) as RawUsuario
+    return mapUsuario(result)
+  },
+
+  async eliminar(id: number): Promise<void> {
+    const response = await fetch(`${getApiUrl()}/api/Usuarios/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "Error al eliminar trabajador"))
+    }
   },
 }

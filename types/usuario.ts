@@ -21,3 +21,11 @@ export interface CreateTrabajadorDto {
   idSucursal: number
   rol: UsuarioRol
 }
+
+export interface UpdateTrabajadorDto {
+  nombreCompleto?: string
+  correo?: string
+  idSucursal?: number
+  rol?: UsuarioRol
+  activo?: boolean
+}

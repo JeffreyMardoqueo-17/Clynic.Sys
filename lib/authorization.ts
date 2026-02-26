@@ -15,6 +15,7 @@ export function normalizeRole(role: unknown): AppRole {
 const routeRules: Array<{ prefix: string; roles: AppRole[] }> = [
   { prefix: "/doctors", roles: ["Admin"] },
   { prefix: "/branches", roles: ["Admin"] },
+  { prefix: "/services", roles: ["Admin"] },
   { prefix: "/billing", roles: ["Admin"] },
   { prefix: "/reports", roles: ["Admin"] },
   { prefix: "/settings", roles: ["Admin"] },

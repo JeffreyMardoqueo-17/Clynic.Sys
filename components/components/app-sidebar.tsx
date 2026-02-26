@@ -18,6 +18,7 @@ import {
   HelpCircle,
   LogOut,
   Hospital,
+  BriefcaseMedical,
 } from "lucide-react"
 
 import {
@@ -42,6 +43,7 @@ const navItems: Array<{ title: string; url: string; icon: typeof LayoutDashboard
   { title: "Citas", url: "/appointment", icon: CalendarDays, roles: ["Admin", "Doctor", "Recepcionista"] },
   { title: "Trabajadores", url: "/doctors", icon: Stethoscope, roles: ["Admin"] },
   { title: "Sucursales", url: "/branches", icon: Building2, roles: ["Admin"] },
+  { title: "Servicios", url: "/services", icon: BriefcaseMedical, roles: ["Admin"] },
   { title: "Historial Clínico", url: "/records", icon: FileText, roles: ["Admin", "Doctor"] },
   { title: "Facturación", url: "/billing", icon: CreditCard, roles: ["Admin"] },
   { title: "Reportes", url: "/reports", icon: BarChart3, roles: ["Admin"] },
