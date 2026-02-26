@@ -1,7 +1,9 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 
 import {
   LayoutDashboard,
@@ -16,6 +18,7 @@ import {
   HelpCircle,
   LogOut,
   Hospital,
+  BriefcaseMedical,
 } from "lucide-react"
 
 import {
@@ -30,26 +33,46 @@ import {
   SidebarMenuButton,
   SidebarSeparator,
 } from "@/components/ui/sidebar"
+import { authService } from "@/services/auth.service"
+import { AppRole, normalizeRole } from "@/lib/authorization"
 
-const navItems = [
-  { title: "Dashboard", url: "/appointment", icon: LayoutDashboard },
-  { title: "Pacientes", url: "/patients", icon: Users },
-  { title: "Citas", url: "/appointments", icon: CalendarDays },
-  { title: "Doctores", url: "/doctors", icon: Stethoscope },
-  { title: "Sucursales", url: "/branches", icon: Building2 },
-  { title: "Historial Clínico", url: "/records", icon: FileText },
-  { title: "Facturación", url: "/billing", icon: CreditCard },
-  { title: "Reportes", url: "/reports", icon: BarChart3 },
+const navItems: Array<{ title: string; url: string; icon: typeof LayoutDashboard; roles: AppRole[] }> = [
+  { title: "Home", url: "/", icon: LayoutDashboard, roles: ["Admin", "Doctor", "Recepcionista"] },
+  { title: "Mi Clínica", url: "/clinic", icon: Hospital, roles: ["Admin", "Doctor", "Recepcionista"] },
+  { title: "Pacientes", url: "/patients", icon: Users, roles: ["Admin", "Doctor", "Recepcionista"] },
+  { title: "Citas", url: "/appointment", icon: CalendarDays, roles: ["Admin", "Doctor", "Recepcionista"] },
+  { title: "Trabajadores", url: "/doctors", icon: Stethoscope, roles: ["Admin"] },
+  { title: "Sucursales", url: "/branches", icon: Building2, roles: ["Admin"] },
+  { title: "Servicios", url: "/services", icon: BriefcaseMedical, roles: ["Admin"] },
+  { title: "Historial Clínico", url: "/records", icon: FileText, roles: ["Admin", "Doctor"] },
+  { title: "Facturación", url: "/billing", icon: CreditCard, roles: ["Admin"] },
+  { title: "Reportes", url: "/reports", icon: BarChart3, roles: ["Admin"] },
 ]
 
-const secondaryItems = [
-  { title: "Configuración", url: "/settings", icon: Settings },
-  { title: "Ayuda", url: "/help", icon: HelpCircle },
+const secondaryItems: Array<{ title: string; url: string; icon: typeof Settings; roles: AppRole[] }> = [
+  { title: "Configuración", url: "/settings", icon: Settings, roles: ["Admin"] },
+  { title: "Ayuda", url: "/help", icon: HelpCircle, roles: ["Admin", "Doctor", "Recepcionista"] },
 ]
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  role?: string
+}
+
+export function AppSidebar({ role }: AppSidebarProps) {
+  const router = useRouter()
   const pathname = usePathname()
+  const [loggingOut, setLoggingOut] = useState(false)
+  const normalizedRole = normalizeRole(role)
   const isPathActive = (url: string) => pathname === url || pathname.startsWith(`${url}/`)
+
+  const handleLogout = async () => {
+    if (loggingOut) return
+
+    setLoggingOut(true)
+    await authService.logout()
+    router.replace("/auth/login")
+    router.refresh()
+  }
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -77,6 +100,10 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navegación</SidebarGroupLabel>
           <SidebarMenu>
             {navItems.map((item) => {
+              if (!item.roles.includes(normalizedRole)) {
+                return null
+              }
+
               const isActive = isPathActive(item.url)
               return (
                 <SidebarMenuItem key={item.url}>
@@ -98,6 +125,10 @@ export function AppSidebar() {
             <SidebarGroupLabel>Sistema</SidebarGroupLabel>
             <SidebarMenu>
               {secondaryItems.map((item) => {
+                if (!item.roles.includes(normalizedRole)) {
+                  return null
+                }
+
                 const isActive = isPathActive(item.url)
                 return (
                   <SidebarMenuItem key={item.url}>
@@ -119,9 +150,9 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Cerrar sesión">
+            <SidebarMenuButton tooltip="Cerrar sesión" onClick={handleLogout} disabled={loggingOut}>
               <LogOut className="size-4" />
-              <span>Cerrar sesión</span>
+              <span>{loggingOut ? "Cerrando..." : "Cerrar sesión"}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

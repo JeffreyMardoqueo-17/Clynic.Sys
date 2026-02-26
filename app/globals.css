@@ -157,3 +157,47 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+@layer components {
+  .clinic-shell {
+    background: rgba(6, 5, 17, 0.96);
+    border: 1px solid color-mix(in oklch, oklch(0.7 0.14 230) 35%, #060511);
+    border-radius: 1rem;
+    color: oklch(0.7 0.14 230);
+  }
+
+  .clinic-heading {
+    color: oklch(0.7 0.14 230);
+  }
+
+  .clinic-subtle {
+    color: color-mix(in oklch, oklch(0.7 0.14 230) 70%, #060511);
+  }
+
+  .clinic-accent-line {
+    border-left: 4px solid oklch(0.7 0.14 230);
+    background: color-mix(in oklch, #060511 84%, oklch(0.7 0.14 230));
+  }
+
+  .clinic-chip {
+    border: 1px solid color-mix(in oklch, oklch(0.7 0.14 230) 42%, #060511);
+    background: color-mix(in oklch, #060511 78%, oklch(0.7 0.14 230));
+    color: oklch(0.7 0.14 230);
+    border-radius: 0.75rem;
+  }
+
+  .clinic-list-item {
+    border-bottom: 1px solid color-mix(in oklch, oklch(0.7 0.14 230) 26%, #060511);
+  }
+
+  .clinic-list-item:last-child {
+    border-bottom: none;
+  }
+
+  .clinic-empty {
+    background: color-mix(in oklch, #060511 82%, oklch(0.7 0.14 230));
+    border: 1px solid color-mix(in oklch, oklch(0.7 0.14 230) 30%, #060511);
+    color: oklch(0.7 0.14 230);
+    border-radius: 0.875rem;
+  }
+}
