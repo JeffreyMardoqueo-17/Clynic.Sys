@@ -1,9 +1,17 @@
 "use client"
 
-import { useMemo } from "react"
-import { CalendarDays, CalendarPlus, CircleCheck, CircleDashed, CircleX, Clock3, ListFilter } from "lucide-react"
+import { useMemo, useState } from "react"
+import { CalendarDays, CalendarPlus, CircleCheck, CircleDashed, CircleX, Clock3, List, ListFilter, History } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 import {
   Dialog,
   DialogContent,
@@ -31,16 +39,37 @@ function estadoBadgeClass(estado: number) {
   return "appointment-pill-neutral"
 }
 
+function inDateRange(date: Date, fromDate: string, toDate: string) {
+  const start = fromDate ? new Date(`${fromDate}T00:00:00`) : null
+  const end = toDate ? new Date(`${toDate}T23:59:59`) : null
+
+  if (start && date < start) return false
+  if (end && date > end) return false
+  return true
+}
+
 export function AppointmentManagement() {
   const vm = useAppointmentPage()
+  const [historialDesde, setHistorialDesde] = useState("")
+  const [historialHasta, setHistorialHasta] = useState("")
+  const [vistaActiva, setVistaActiva] = useState<"tabla" | "calendario" | "historial">("tabla")
 
-  const proximasCitas = useMemo(() => {
+  const citasActuales = useMemo(() => {
     const ahora = Date.now()
+
     return vm.citas
       .filter((cita) => new Date(cita.fechaHoraInicioPlan).getTime() >= ahora && cita.estado !== 3)
       .sort((a, b) => new Date(a.fechaHoraInicioPlan).getTime() - new Date(b.fechaHoraInicioPlan).getTime())
-      .slice(0, 5)
   }, [vm.citas])
+
+  const historialCitas = useMemo(() => {
+    const ahora = Date.now()
+
+    return vm.citas
+      .filter((cita) => new Date(cita.fechaHoraInicioPlan).getTime() < ahora)
+      .filter((cita) => inDateRange(new Date(cita.fechaHoraInicioPlan), historialDesde, historialHasta))
+      .sort((a, b) => new Date(b.fechaHoraInicioPlan).getTime() - new Date(a.fechaHoraInicioPlan).getTime())
+  }, [vm.citas, historialDesde, historialHasta])
 
   if (vm.loading) {
     return <p className="text-sm text-muted-foreground">Cargando módulo de citas...</p>
@@ -63,6 +92,64 @@ export function AppointmentManagement() {
       </header>
 
       {vm.error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{vm.error}</div>}
+
+      <div className="rounded-lg border p-4">
+        <p className="mb-2 text-sm font-medium text-muted-foreground">Vista activa</p>
+        <Breadcrumb>
+          <BreadcrumbList className="text-base md:text-lg">
+            <BreadcrumbItem>
+              {vistaActiva === "tabla" ? (
+                <BreadcrumbPage className="font-semibold">Tabla</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink
+                  href="#"
+                  className="font-medium"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setVistaActiva("tabla")
+                  }}
+                >
+                  Tabla
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              {vistaActiva === "calendario" ? (
+                <BreadcrumbPage className="font-semibold">Calendario</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink
+                  href="#"
+                  className="font-medium"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setVistaActiva("calendario")
+                  }}
+                >
+                  Calendario
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              {vistaActiva === "historial" ? (
+                <BreadcrumbPage className="font-semibold">Historial</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink
+                  href="#"
+                  className="font-medium"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setVistaActiva("historial")
+                  }}
+                >
+                  Historial
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
 
       <Card className="border-0 bg-transparent shadow-none">
         <CardHeader>
@@ -250,122 +337,128 @@ export function AppointmentManagement() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 border-0 bg-transparent shadow-none">
-          <CardHeader>
-            <CardTitle>Calendario de citas</CardTitle>
-            <CardDescription>Vista mensual, semanal, diaria y agenda</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AppointmentBigCalendar citas={vm.citas} sucursales={vm.sucursales} />
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 bg-transparent shadow-none">
-          <CardHeader>
-            <CardTitle>Quién sigue</CardTitle>
-            <CardDescription>Próximas {proximasCitas.length} citas</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {proximasCitas.length === 0 && <p className="text-muted-foreground text-sm">Sin próximas citas.</p>}
-            {proximasCitas.map((cita) => (
-              <div key={cita.id} className="appointment-next-item rounded-xl p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">#{cita.id} · {cita.nombrePaciente}</p>
-                  <span className={`appointment-pill ${estadoBadgeClass(cita.estado)}`}>
-                    {estadoLabel(cita.estado)}
-                  </span>
-                </div>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {new Date(cita.fechaHoraInicioPlan).toLocaleString()}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
+      {vistaActiva === "tabla" && (
       <Card>
         <CardHeader>
-          <CardTitle>Agenda</CardTitle>
-          <CardDescription>{vm.citas.length} cita(s)</CardDescription>
+          <CardTitle className="flex items-center gap-2"><List className="size-5" /> Lista de citas actuales</CardTitle>
+          <CardDescription>{citasActuales.length} cita(s) vigente(s)</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3 md:hidden">
-            {vm.citas.map((cita) => (
-              <div key={cita.id} className="rounded-lg border p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium">#{cita.id} · {cita.nombrePaciente}</p>
-                  <span className={`appointment-pill ${estadoBadgeClass(cita.estado)}`}>
-                    {estadoLabel(cita.estado)}
-                  </span>
-                </div>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {new Date(cita.fechaHoraInicioPlan).toLocaleString()}
-                </p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {vm.sucursales.find((s) => s.id === cita.idSucursal)?.nombre ?? `Sucursal ${cita.idSucursal}`}
-                </p>
-                <p className="mt-1 text-xs">Servicios: {cita.servicios.map((s) => s.nombreServicio).join(", ")}</p>
-              </div>
-            ))}
-          </div>
-
-          <table className="hidden w-full table-fixed text-sm md:table">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="p-2">ID</th>
-                <th className="p-2">Paciente</th>
-                <th className="p-2">Sucursal</th>
-                <th className="p-2">Inicio</th>
-                <th className="p-2">Estado</th>
-                <th className="p-2">Doctor</th>
-                <th className="p-2">Servicios</th>
-                {vm.canCreateInternal && <th className="p-2">Asignar doctor</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {vm.citas.map((cita) => (
-                <tr key={cita.id} className="border-b">
-                  <td className="p-2">#{cita.id}</td>
-                  <td className="p-2 wrap-break-word">{cita.nombrePaciente}</td>
-                  <td className="p-2 wrap-break-word">{vm.sucursales.find((s) => s.id === cita.idSucursal)?.nombre ?? cita.idSucursal}</td>
-                  <td className="p-2 wrap-break-word">{new Date(cita.fechaHoraInicioPlan).toLocaleString()}</td>
-                  <td className="p-2">
-                    <span className={`appointment-pill ${estadoBadgeClass(cita.estado)}`}>
-                      {estadoLabel(cita.estado)}
-                    </span>
-                  </td>
-                  <td className="p-2">{cita.idDoctor ?? "Sin asignar"}</td>
-                  <td className="p-2 wrap-break-word">{cita.servicios.map((s) => s.nombreServicio).join(", ")}</td>
-                  {vm.canCreateInternal && (
-                    <td className="p-2">
-                      <select
-                        className="border-input bg-background rounded-md border px-2 py-1"
-                        defaultValue={cita.idDoctor ?? "none"}
-                        disabled={vm.asignarLoading}
-                        onChange={(e) =>
-                          vm.asignarDoctor(
-                            cita.id,
-                            e.target.value === "none" ? undefined : Number(e.target.value)
-                          )
-                        }
-                      >
-                        <option value="none">Sin doctor</option>
-                        {vm.doctores.map((doctor) => (
-                          <option key={doctor.id} value={doctor.id}>
-                            {doctor.nombreCompleto}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {citasActuales.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay citas actuales.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="p-2">ID</th>
+                    <th className="p-2">Paciente</th>
+                    <th className="p-2">Inicio</th>
+                    <th className="p-2">Estado</th>
+                    <th className="p-2">Sucursal</th>
+                    <th className="p-2">Servicios</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {citasActuales.map((cita) => (
+                    <tr key={cita.id} className="border-b">
+                      <td className="p-2">#{cita.id}</td>
+                      <td className="p-2 wrap-break-word">{cita.nombrePaciente}</td>
+                      <td className="p-2 wrap-break-word">{new Date(cita.fechaHoraInicioPlan).toLocaleString()}</td>
+                      <td className="p-2">
+                        <span className={`appointment-pill ${estadoBadgeClass(cita.estado)}`}>
+                          {estadoLabel(cita.estado)}
+                        </span>
+                      </td>
+                      <td className="p-2 wrap-break-word">{vm.sucursales.find((s) => s.id === cita.idSucursal)?.nombre ?? `Sucursal ${cita.idSucursal}`}</td>
+                      <td className="p-2 wrap-break-word">{cita.servicios.map((s) => s.nombreServicio).join(", ")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
+      )}
+
+      {vistaActiva === "calendario" && (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><CalendarDays className="size-5" /> Calendario</CardTitle>
+          <CardDescription>Vista interactiva para navegar y revisar citas actuales</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AppointmentBigCalendar citas={citasActuales} sucursales={vm.sucursales} />
+        </CardContent>
+      </Card>
+      )}
+
+      {vistaActiva === "historial" && (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><History className="size-5" /> Historial de citas</CardTitle>
+          <CardDescription>Filtra citas pasadas por rango de fechas</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Desde</label>
+              <input
+                type="date"
+                className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                value={historialDesde}
+                onChange={(e) => setHistorialDesde(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Hasta</label>
+              <input
+                type="date"
+                className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                value={historialHasta}
+                onChange={(e) => setHistorialHasta(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {historialCitas.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay citas en el historial para ese rango.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="p-2">ID</th>
+                    <th className="p-2">Paciente</th>
+                    <th className="p-2">Fecha</th>
+                    <th className="p-2">Estado</th>
+                    <th className="p-2">Sucursal</th>
+                    <th className="p-2">Doctor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historialCitas.map((cita) => (
+                    <tr key={cita.id} className="border-b">
+                      <td className="p-2">#{cita.id}</td>
+                      <td className="p-2 wrap-break-word">{cita.nombrePaciente}</td>
+                      <td className="p-2 wrap-break-word">{new Date(cita.fechaHoraInicioPlan).toLocaleString()}</td>
+                      <td className="p-2">
+                        <span className={`appointment-pill ${estadoBadgeClass(cita.estado)}`}>
+                          {estadoLabel(cita.estado)}
+                        </span>
+                      </td>
+                      <td className="p-2 wrap-break-word">{vm.sucursales.find((s) => s.id === cita.idSucursal)?.nombre ?? `Sucursal ${cita.idSucursal}`}</td>
+                      <td className="p-2">{cita.idDoctor ?? "Sin asignar"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      )}
     </div>
   )
 }

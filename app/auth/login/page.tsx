@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { LogIn, Stethoscope } from "lucide-react"
+import { Building2, LogIn, Stethoscope, UserRoundPlus } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,43 @@ export default function Page() {
   const [codigo, setCodigo] = useState("")
   const [nuevaClave, setNuevaClave] = useState("")
   const [confirmarClave, setConfirmarClave] = useState("")
+  const [onboardingOpen, setOnboardingOpen] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState<1 | 2>(1)
+  const [onboardingLoading, setOnboardingLoading] = useState(false)
+  const [onboardingError, setOnboardingError] = useState<string | null>(null)
+
+  const [nombreClinica, setNombreClinica] = useState("")
+  const [telefonoClinica, setTelefonoClinica] = useState("")
+  const [direccionClinica, setDireccionClinica] = useState("")
+  const [idClinicaCreada, setIdClinicaCreada] = useState<number | null>(null)
+
+  const [nombreAdmin, setNombreAdmin] = useState("")
+  const [correoAdmin, setCorreoAdmin] = useState("")
+  const [claveAdmin, setClaveAdmin] = useState("")
+  const [confirmarClaveAdmin, setConfirmarClaveAdmin] = useState("")
+
+  const resetOnboardingState = () => {
+    setOnboardingStep(1)
+    setOnboardingLoading(false)
+    setOnboardingError(null)
+
+    setNombreClinica("")
+    setTelefonoClinica("")
+    setDireccionClinica("")
+    setIdClinicaCreada(null)
+
+    setNombreAdmin("")
+    setCorreoAdmin("")
+    setClaveAdmin("")
+    setConfirmarClaveAdmin("")
+  }
+
+  const handleOnboardingOpenChange = (open: boolean) => {
+    setOnboardingOpen(open)
+    if (!open) {
+      resetOnboardingState()
+    }
+  }
 
   const getSafeNextPath = () => {
     if (typeof window === "undefined") return "/"
@@ -127,6 +164,85 @@ export default function Page() {
     }
   }
 
+  const handleCrearClinicaStep = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setOnboardingError(null)
+
+    if (!nombreClinica.trim() || !telefonoClinica.trim() || !direccionClinica.trim()) {
+      setOnboardingError("Completa todos los campos de la clínica")
+      return
+    }
+
+    setOnboardingLoading(true)
+
+    try {
+      const clinica = await authService.createOnboardingClinic({
+        nombre: nombreClinica.trim(),
+        telefono: telefonoClinica.trim(),
+        direccion: direccionClinica.trim(),
+      })
+
+      setIdClinicaCreada(clinica.id)
+      setOnboardingStep(2)
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setOnboardingError(err.message || "No se pudo crear la clínica")
+      } else {
+        setOnboardingError("No se pudo crear la clínica")
+      }
+    } finally {
+      setOnboardingLoading(false)
+    }
+  }
+
+  const handleCrearCuentaAdminStep = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setOnboardingError(null)
+
+    if (!idClinicaCreada || idClinicaCreada <= 0) {
+      setOnboardingError("Primero debes crear la clínica")
+      return
+    }
+
+    if (!nombreAdmin.trim() || !correoAdmin.trim() || !claveAdmin) {
+      setOnboardingError("Completa todos los campos de la cuenta")
+      return
+    }
+
+    if (claveAdmin !== confirmarClaveAdmin) {
+      setOnboardingError("Las contraseñas no coinciden")
+      return
+    }
+
+    setOnboardingLoading(true)
+
+    try {
+      const result = await authService.register({
+        nombreCompleto: nombreAdmin.trim(),
+        correo: correoAdmin.trim().toLowerCase(),
+        clave: claveAdmin,
+        idClinica: idClinicaCreada,
+        rol: 1,
+      })
+
+      if (!result.exito) {
+        setOnboardingError(result.mensaje)
+        return
+      }
+
+      await authService.getProfile()
+      router.replace("/")
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setOnboardingError(err.message || "No se pudo crear la cuenta")
+      } else {
+        setOnboardingError("No se pudo crear la cuenta")
+      }
+    } finally {
+      setOnboardingLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-6xl bg-card text-card-foreground rounded-3xl shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-2 border border-border">
@@ -150,6 +266,16 @@ export default function Page() {
               Plataforma profesional para la gestión de clínicas,
               sucursales y administración médica centralizada.
             </p>
+
+            <Button
+              type="button"
+              variant="secondary"
+              className="mt-8"
+              onClick={() => setOnboardingOpen(true)}
+            >
+              <Building2 className="mr-2 size-4" />
+              Crear clínica
+            </Button>
           </div>
         </div>
 
@@ -164,6 +290,16 @@ export default function Page() {
             <p className="text-sm text-muted-foreground mb-8">
               Accede al panel administrativo
             </p>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="mb-6 w-full"
+              onClick={() => setOnboardingOpen(true)}
+            >
+              <UserRoundPlus className="mr-2 size-4" />
+              Crear clínica y cuenta admin
+            </Button>
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -296,6 +432,147 @@ export default function Page() {
         </div>
 
       </div>
+
+      <Dialog open={onboardingOpen} onOpenChange={handleOnboardingOpenChange}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {onboardingStep === 1 ? "Paso 1 de 2 · Crear clínica" : "Paso 2 de 2 · Crear cuenta administrador"}
+            </DialogTitle>
+            <DialogDescription>
+              {onboardingStep === 1
+                ? "Primero registra tu clínica para habilitar el entorno SaaS."
+                : "Ahora crea tu cuenta principal. Se registrará automáticamente con rol Administrador."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mb-2 grid grid-cols-2 gap-2 text-sm">
+            <div className={`rounded-md border px-3 py-2 ${onboardingStep === 1 ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              1. Clínica
+            </div>
+            <div className={`rounded-md border px-3 py-2 ${onboardingStep === 2 ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>
+              2. Cuenta admin
+            </div>
+          </div>
+
+          {onboardingStep === 1 && (
+            <form onSubmit={handleCrearClinicaStep} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="onb-clinica-nombre">Nombre de clínica</Label>
+                <Input
+                  id="onb-clinica-nombre"
+                  value={nombreClinica}
+                  onChange={(e) => setNombreClinica(e.target.value)}
+                  placeholder="Clínica Central"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="onb-clinica-telefono">Teléfono</Label>
+                <Input
+                  id="onb-clinica-telefono"
+                  value={telefonoClinica}
+                  onChange={(e) => setTelefonoClinica(e.target.value)}
+                  placeholder="809-000-0000"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="onb-clinica-direccion">Dirección</Label>
+                <Input
+                  id="onb-clinica-direccion"
+                  value={direccionClinica}
+                  onChange={(e) => setDireccionClinica(e.target.value)}
+                  placeholder="Av. Principal #100"
+                  required
+                />
+              </div>
+
+              {onboardingError && <StatusAlert type="error" message={onboardingError} />}
+
+              <DialogFooter>
+                <Button type="submit" disabled={onboardingLoading}>
+                  {onboardingLoading ? "Creando clínica..." : "Crear clínica y continuar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+
+          {onboardingStep === 2 && (
+            <form onSubmit={handleCrearCuentaAdminStep} className="space-y-4">
+              <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+                Clínica creada: <strong>{nombreClinica}</strong> (ID {idClinicaCreada})
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="onb-admin-nombre">Nombre completo</Label>
+                <Input
+                  id="onb-admin-nombre"
+                  value={nombreAdmin}
+                  onChange={(e) => setNombreAdmin(e.target.value)}
+                  placeholder="Nombre del administrador"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="onb-admin-correo">Correo</Label>
+                <Input
+                  id="onb-admin-correo"
+                  type="email"
+                  value={correoAdmin}
+                  onChange={(e) => setCorreoAdmin(e.target.value)}
+                  placeholder="admin@tuclinica.com"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="onb-admin-clave">Contraseña</Label>
+                <Input
+                  id="onb-admin-clave"
+                  type="password"
+                  value={claveAdmin}
+                  onChange={(e) => setClaveAdmin(e.target.value)}
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="onb-admin-confirmar">Confirmar contraseña</Label>
+                <Input
+                  id="onb-admin-confirmar"
+                  type="password"
+                  value={confirmarClaveAdmin}
+                  onChange={(e) => setConfirmarClaveAdmin(e.target.value)}
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              {onboardingError && <StatusAlert type="error" message={onboardingError} />}
+
+              <DialogFooter className="gap-2 sm:justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOnboardingStep(1)}
+                  disabled={onboardingLoading}
+                >
+                  Volver a clínica
+                </Button>
+
+                <Button type="submit" disabled={onboardingLoading}>
+                  {onboardingLoading ? "Creando cuenta..." : "Finalizar y entrar al panel"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

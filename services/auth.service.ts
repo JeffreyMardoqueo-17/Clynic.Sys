@@ -2,12 +2,14 @@
 
 import {
   LoginDto,
+  RegisterDto,
   AuthResponseDto,
   UsuarioResponseDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   ChangePasswordDto,
 } from "@/types/auth";
+import { ClinicaResponseDto, CreateClinicaDto } from "@/types/clinica";
 import { getApiErrorMessage, getApiUrl } from "@/services/api.utils";
 
 type ApiMessageResponse = {
@@ -51,7 +53,7 @@ export const authService = {
     return result;
   },
 
-  async register(data: any): Promise<AuthResponseDto> {
+  async register(data: RegisterDto): Promise<AuthResponseDto> {
     const response = await fetch(`${getApiUrl()}/auth/register`, {
       method: "POST",
       headers: {
@@ -84,6 +86,23 @@ export const authService = {
     }
 
     return result;
+  },
+
+  async createOnboardingClinic(data: CreateClinicaDto): Promise<ClinicaResponseDto> {
+    const response = await fetch(`${getApiUrl()}/auth/onboarding/clinic`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo crear la clínica"));
+    }
+
+    return response.json();
   },
 
   async getProfile(): Promise<UsuarioResponseDto> {

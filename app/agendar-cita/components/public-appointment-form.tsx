@@ -1,5 +1,6 @@
 "use client"
 
+import { Building2, CalendarClock, ClipboardList, UserRound } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -18,6 +19,7 @@ export function PublicAppointmentForm({ initialClinicaId }: PublicAppointmentFor
     catalogo,
     catalogLoading,
     catalogError,
+    catalogWarning,
     loadCatalogo,
     nombres,
     setNombres,
@@ -51,9 +53,12 @@ export function PublicAppointmentForm({ initialClinicaId }: PublicAppointmentFor
         </p>
       </header>
 
-      <Card>
+      <Card className="border-l-4 border-l-primary">
         <CardHeader>
-          <CardTitle>Clínica</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary" />
+            Clínica
+          </CardTitle>
           <CardDescription>
             Ingresa el ID de clínica para cargar sucursales y servicios disponibles.
           </CardDescription>
@@ -77,10 +82,14 @@ export function PublicAppointmentForm({ initialClinicaId }: PublicAppointmentFor
       </Card>
 
       {catalogError && <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{catalogError}</p>}
+  {catalogWarning && <p className="rounded-md bg-amber-500/10 p-3 text-sm text-amber-700">{catalogWarning}</p>}
 
-      <Card>
+      <Card className="border-l-4 border-l-secondary">
         <CardHeader>
-          <CardTitle>Datos para tu cita</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarClock className="h-5 w-5 text-primary" />
+            Datos para tu cita
+          </CardTitle>
           <CardDescription>
             Este registro inicial es para agendar. Luego la clínica completa el expediente clínico.
           </CardDescription>
@@ -131,14 +140,22 @@ export function PublicAppointmentForm({ initialClinicaId }: PublicAppointmentFor
           </div>
 
           <div className="space-y-2">
-            <Label>Servicios *</Label>
+            <Label className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-primary" />
+              Servicios *
+            </Label>
+            {idSucursal > 0 && (catalogo?.servicios?.length ?? 0) === 0 && (
+              <p className="rounded-md bg-amber-500/10 p-2 text-xs text-amber-700">
+                No hay servicios activos para esta clínica. Debes crear/activar servicios en el panel administrativo.
+              </p>
+            )}
             <div className="grid gap-2 md:grid-cols-2">
               {(catalogo?.servicios ?? []).map((servicio) => {
                 const checked = idsServicios.includes(servicio.id)
                 return (
                   <label
                     key={servicio.id}
-                    className="border-border flex cursor-pointer items-center justify-between rounded-md border p-3 text-sm"
+                    className="border-border hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-md border p-3 text-sm transition-colors"
                   >
                     <span>
                       {servicio.nombreServicio} · {servicio.duracionMin} min
@@ -155,7 +172,10 @@ export function PublicAppointmentForm({ initialClinicaId }: PublicAppointmentFor
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="notas">Notas</Label>
+            <Label htmlFor="notas" className="flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-primary" />
+              Notas
+            </Label>
             <textarea
               id="notas"
               className="border-input bg-background min-h-24 w-full rounded-md border px-3 py-2 text-sm"

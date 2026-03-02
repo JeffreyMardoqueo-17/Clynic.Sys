@@ -5,6 +5,15 @@ export interface LoginDto {
   clave: string;
 }
 
+export interface RegisterDto {
+  nombreCompleto: string;
+  correo: string;
+  clave: string;
+  idClinica: number;
+  idSucursal?: number;
+  rol: 1 | 2 | 3;
+}
+
 export interface ForgotPasswordDto {
   correo: string;
 }

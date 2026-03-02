@@ -35,6 +35,7 @@ export function usePublicAppointment(initialClinicaId?: number) {
   const [catalogo, setCatalogo] = useState<CatalogoCitaPublicaDto | null>(null)
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [catalogError, setCatalogError] = useState<string | null>(null)
+  const [catalogWarning, setCatalogWarning] = useState<string | null>(null)
 
   const [nombres, setNombres] = useState("")
   const [apellidos, setApellidos] = useState("")
@@ -73,6 +74,7 @@ export function usePublicAppointment(initialClinicaId?: number) {
 
     setCatalogLoading(true)
     setCatalogError(null)
+    setCatalogWarning(null)
 
     try {
       const result = await citaService.obtenerCatalogoPublico(clinicaId)
@@ -88,10 +90,17 @@ export function usePublicAppointment(initialClinicaId?: number) {
         return primeraSucursal?.id ?? 0
       })
       setIdsServicios((prev) => prev.filter((idServicio) => result.servicios.some((servicio) => servicio.id === idServicio)))
+
+      if (result.sucursales.length === 0) {
+        setCatalogWarning("La clínica no tiene sucursales activas para agendar.")
+      } else if (result.servicios.length === 0) {
+        setCatalogWarning("La clínica no tiene servicios activos disponibles para agendar.")
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo cargar el catálogo"
       setCatalogError(message)
       setCatalogo(null)
+      setCatalogWarning(null)
     } finally {
       setCatalogLoading(false)
     }
@@ -162,6 +171,7 @@ export function usePublicAppointment(initialClinicaId?: number) {
     catalogo,
     catalogLoading,
     catalogError,
+    catalogWarning,
     loadCatalogo,
     nombres,
     setNombres,

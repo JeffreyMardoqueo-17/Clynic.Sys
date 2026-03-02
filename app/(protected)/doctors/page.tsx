@@ -149,13 +149,6 @@ export default function DoctorsPage() {
         </CardContent>
       </Card>
 
-      <Card bordered={false} shadow={false}>
-        <CardContent className="flex items-start gap-2 py-4 text-sm text-muted-foreground">
-          <BriefcaseMedical className="mt-0.5 size-4" />
-          El botón eliminar realiza desactivación lógica (soft delete) desde backend.
-        </CardContent>
-      </Card>
-
       <DoctorViewDialog open={viewOpen} usuario={selectedWorker} onOpenChange={setViewOpen} />
 
       <EditWorkerDialog
