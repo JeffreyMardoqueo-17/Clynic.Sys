@@ -23,6 +23,7 @@ export default function DoctorsPage() {
     nombreCompleto,
     setNombreCompleto,
     correo,
+    correoValido,
     setCorreo,
     rol,
     setRol,
@@ -52,6 +53,7 @@ export default function DoctorsPage() {
     editNombreCompleto,
     setEditNombreCompleto,
     editCorreo,
+    editCorreoValido,
     setEditCorreo,
     editRol,
     setEditRol,
@@ -63,6 +65,7 @@ export default function DoctorsPage() {
     handleUpdateWorker,
     handleDeleteWorker,
     handleReactivateWorker,
+    handleResendInvitation,
   } = useDoctorsPage()
 
   if (loading) {
@@ -96,6 +99,7 @@ export default function DoctorsPage() {
           nombreCompleto={nombreCompleto}
           onNombreCompletoChange={setNombreCompleto}
           correo={correo}
+          correoValido={correoValido}
           onCorreoChange={setCorreo}
           rol={rol}
           onRolChange={setRol}
@@ -136,6 +140,7 @@ export default function DoctorsPage() {
             onEdit={openEdit}
             onDelete={handleDeleteWorker}
             onReactivate={handleReactivateWorker}
+            onResendInvitation={handleResendInvitation}
           />
 
           <DoctorsPagination
@@ -159,6 +164,7 @@ export default function DoctorsPage() {
         nombreCompleto={editNombreCompleto}
         onNombreCompletoChange={setEditNombreCompleto}
         correo={editCorreo}
+        correoValido={editCorreoValido}
         onCorreoChange={setEditCorreo}
         rol={editRol}
         onRolChange={setEditRol}

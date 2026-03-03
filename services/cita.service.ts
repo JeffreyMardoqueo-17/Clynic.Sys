@@ -1,6 +1,7 @@
 import { getApiErrorMessage, getApiUrl } from "@/services/api.utils"
 import {
   AsignarDoctorCitaDto,
+  CambiarEstadoCitaDto,
   CatalogoCitaPublicaDto,
   CitaResponseDto,
   CreateCitaInternaDto,
@@ -102,6 +103,23 @@ export const citaService = {
 
     if (!response.ok) {
       throw new Error(await getApiErrorMessage(response, "No se pudo asignar el doctor"))
+    }
+
+    return response.json()
+  },
+
+  async cambiarEstado(idCita: number, data: CambiarEstadoCitaDto): Promise<CitaResponseDto> {
+    const response = await fetch(`${getApiUrl()}/api/Citas/${idCita}/estado`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo cambiar el estado de la cita"))
     }
 
     return response.json()

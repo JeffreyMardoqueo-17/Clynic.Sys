@@ -26,6 +26,7 @@ type Props = {
   nombreCompleto: string
   onNombreCompletoChange: (value: string) => void
   correo: string
+  correoValido: boolean
   onCorreoChange: (value: string) => void
   rol: UsuarioRol
   onRolChange: (value: UsuarioRol) => void
@@ -42,6 +43,7 @@ export function CreateWorkerDialog({
   nombreCompleto,
   onNombreCompletoChange,
   correo,
+  correoValido,
   onCorreoChange,
   rol,
   onRolChange,
@@ -89,6 +91,9 @@ export function CreateWorkerDialog({
               placeholder="doctor@clinica.com"
               required
             />
+            {correo.trim().length > 0 && !correoValido && (
+              <p className="text-xs text-destructive">Ingresa un correo válido (ejemplo: usuario@dominio.com).</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -132,7 +137,7 @@ export function CreateWorkerDialog({
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !correoValido}>
               {loading ? "Guardando..." : "Crear trabajador"}
             </Button>
           </DialogFooter>

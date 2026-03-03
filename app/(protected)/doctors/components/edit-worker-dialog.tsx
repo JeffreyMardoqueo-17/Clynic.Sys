@@ -26,6 +26,7 @@ type Props = {
   nombreCompleto: string
   onNombreCompletoChange: (value: string) => void
   correo: string
+  correoValido: boolean
   onCorreoChange: (value: string) => void
   rol: UsuarioRol
   onRolChange: (value: UsuarioRol) => void
@@ -42,6 +43,7 @@ export function EditWorkerDialog({
   nombreCompleto,
   onNombreCompletoChange,
   correo,
+  correoValido,
   onCorreoChange,
   rol,
   onRolChange,
@@ -80,6 +82,9 @@ export function EditWorkerDialog({
               onChange={(e) => onCorreoChange(e.target.value)}
               required
             />
+            {correo.trim().length > 0 && !correoValido && (
+              <p className="text-xs text-destructive">Ingresa un correo válido (ejemplo: usuario@dominio.com).</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -123,7 +128,7 @@ export function EditWorkerDialog({
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={submitting || !nombreCompleto.trim() || !correo.trim()}>
+            <Button type="submit" disabled={submitting || !nombreCompleto.trim() || !correo.trim() || !correoValido}>
               {submitting ? "Guardando..." : "Guardar cambios"}
             </Button>
           </DialogFooter>

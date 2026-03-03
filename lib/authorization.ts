@@ -23,6 +23,7 @@ const routeRules: Array<{ prefix: string; roles: AppRole[] }> = [
 
   { prefix: "/records", roles: ["Admin", "Doctor"] },
 
+  { prefix: "/appointment-services", roles: ["Admin", "Doctor", "Recepcionista"] },
   { prefix: "/appointment", roles: ["Admin", "Doctor", "Recepcionista"] },
   { prefix: "/patients", roles: ["Admin", "Doctor", "Recepcionista"] },
   { prefix: "/clinic", roles: ["Admin", "Doctor", "Recepcionista"] },

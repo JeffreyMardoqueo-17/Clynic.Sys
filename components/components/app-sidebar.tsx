@@ -41,6 +41,7 @@ const navItems: Array<{ title: string; url: string; icon: typeof LayoutDashboard
   { title: "Mi Clínica", url: "/clinic", icon: Hospital, roles: ["Admin", "Doctor", "Recepcionista"] },
   { title: "Pacientes", url: "/patients", icon: Users, roles: ["Admin", "Doctor", "Recepcionista"] },
   { title: "Citas", url: "/appointment", icon: CalendarDays, roles: ["Admin", "Doctor", "Recepcionista"] },
+  { title: "Cita Servicios", url: "/appointment-services", icon: CalendarDays, roles: ["Admin", "Doctor", "Recepcionista"] },
   { title: "Trabajadores", url: "/doctors", icon: Stethoscope, roles: ["Admin"] },
   { title: "Sucursales", url: "/branches", icon: Building2, roles: ["Admin"] },
   { title: "Servicios", url: "/services", icon: BriefcaseMedical, roles: ["Admin"] },

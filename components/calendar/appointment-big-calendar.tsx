@@ -29,6 +29,8 @@ function estadoClassName(estado: number) {
   if (estado === 2) return "calendar-event-confirmada"
   if (estado === 3) return "calendar-event-cancelada"
   if (estado === 4) return "calendar-event-completada"
+  if (estado === 5) return "calendar-event-confirmada"
+  if (estado === 6) return "calendar-event-pendiente"
   return ""
 }
 

@@ -1,4 +1,4 @@
-export type EstadoCita = 1 | 2 | 3 | 4
+export type EstadoCita = 1 | 2 | 3 | 4 | 5 | 6
 
 export interface CitaServicioDetalleDto {
   idServicio: number
@@ -67,6 +67,11 @@ export interface CreateCitaInternaDto {
 
 export interface AsignarDoctorCitaDto {
   idDoctor?: number
+}
+
+export interface CambiarEstadoCitaDto {
+  nuevoEstado: EstadoCita
+  notasOperacion?: string
 }
 
 export interface RegistrarConsultaMedicaDto {

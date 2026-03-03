@@ -152,4 +152,15 @@ export const usuarioService = {
       throw new Error(await getApiErrorMessage(response, "Error al eliminar trabajador"))
     }
   },
+
+  async reenviarInvitacion(id: number): Promise<void> {
+    const response = await fetch(`${getApiUrl()}/api/Usuarios/${id}/reenviar-invitacion`, {
+      method: "POST",
+      credentials: "include",
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo reenviar la invitación"))
+    }
+  },
 }

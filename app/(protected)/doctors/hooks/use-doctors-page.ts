@@ -11,6 +11,7 @@ import { UsuarioRol, UsuarioResponseDto } from "@/types/usuario"
 
 export function useDoctorsPage() {
   const { showToast } = useToast()
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
   const [clinicId, setClinicId] = useState<number | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -128,6 +129,16 @@ export function useDoctorsPage() {
 
   const totalPages = Math.max(1, Math.ceil(workersFiltered.length / pageSize))
 
+  const correoValido = useMemo(
+    () => emailRegex.test(correo.trim().toLowerCase()),
+    [correo]
+  )
+
+  const editCorreoValido = useMemo(
+    () => emailRegex.test(editCorreo.trim().toLowerCase()),
+    [editCorreo]
+  )
+
   const paginatedWorkers = useMemo(() => {
     const start = (page - 1) * pageSize
     return workersFiltered.slice(start, start + pageSize)
@@ -141,6 +152,13 @@ export function useDoctorsPage() {
     const idSucursal = Number(idSucursalCrear)
     if (!idSucursal || idSucursal <= 0) {
       const message = "Debes seleccionar una sucursal"
+      setError(message)
+      showToast(message, "warning")
+      return
+    }
+
+    if (!correoValido) {
+      const message = "Ingresa un correo válido para crear el trabajador"
       setError(message)
       showToast(message, "warning")
       return
@@ -196,6 +214,13 @@ export function useDoctorsPage() {
     const idSucursal = Number(editIdSucursal)
     if (!idSucursal || idSucursal <= 0) {
       const message = "Debes seleccionar una sucursal válida"
+      setError(message)
+      showToast(message, "warning")
+      return
+    }
+
+    if (!editCorreoValido) {
+      const message = "Ingresa un correo válido para actualizar el trabajador"
       setError(message)
       showToast(message, "warning")
       return
@@ -271,6 +296,28 @@ export function useDoctorsPage() {
     }
   }
 
+  const handleResendInvitation = async (worker: UsuarioResponseDto) => {
+    const ok = window.confirm(`¿Reenviar invitación y contraseña temporal a ${worker.nombreCompleto}?`)
+    if (!ok) return
+
+    setActionLoading(true)
+    setError(null)
+
+    try {
+      await usuarioService.reenviarInvitacion(worker.id)
+      if (clinicId) {
+        await loadWorkers(clinicId, sucursalFiltro, buscarNombre, showInactive)
+      }
+      showToast("Invitación reenviada. El usuario recibirá nueva contraseña temporal.", "success")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo reenviar la invitación"
+      setError(message)
+      showToast(message, "error")
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   return {
     loading,
     error,
@@ -282,6 +329,7 @@ export function useDoctorsPage() {
     nombreCompleto,
     setNombreCompleto,
     correo,
+    correoValido,
     setCorreo,
     rol,
     setRol,
@@ -311,6 +359,7 @@ export function useDoctorsPage() {
     editNombreCompleto,
     setEditNombreCompleto,
     editCorreo,
+    editCorreoValido,
     setEditCorreo,
     editRol,
     setEditRol,
@@ -322,5 +371,6 @@ export function useDoctorsPage() {
     handleUpdateWorker,
     handleDeleteWorker,
     handleReactivateWorker,
+    handleResendInvitation,
   }
 }
