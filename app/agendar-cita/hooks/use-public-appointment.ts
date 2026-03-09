@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { citaService } from "@/services/cita.service"
 import { useToast } from "@/hooks/use-toast"
-import { CatalogoCitaPublicaDto, CreateCitaPublicaDto } from "@/types/cita"
+import { CatalogoCitaPublicaDto, CreateCitaPublicaDto, HorariosDisponiblesCitaDto } from "@/types/cita"
 
 function toIsoDateTime(localDateTime: string) {
   if (!localDateTime) {
@@ -11,6 +11,17 @@ function toIsoDateTime(localDateTime: string) {
   }
 
   return localDateTime.length === 16 ? `${localDateTime}:00` : localDateTime
+}
+
+function toDateInputValue(value: Date) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, "0")
+  const day = String(value.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function toDateTimeLocalInputValue(isoValue: string) {
+  return isoValue ? isoValue.slice(0, 16) : ""
 }
 
 function parsePositiveInt(value: string | number | undefined): number {
@@ -35,15 +46,22 @@ export function usePublicAppointment(initialClinicaId?: number) {
   const [catalogo, setCatalogo] = useState<CatalogoCitaPublicaDto | null>(null)
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [catalogError, setCatalogError] = useState<string | null>(null)
+  const [catalogWarning, setCatalogWarning] = useState<string | null>(null)
 
   const [nombres, setNombres] = useState("")
   const [apellidos, setApellidos] = useState("")
   const [correo, setCorreo] = useState("")
   const [telefono, setTelefono] = useState("")
   const [fechaHoraInicioPlan, setFechaHoraInicioPlan] = useState("")
+  const [fechaAgenda, setFechaAgenda] = useState(toDateInputValue(new Date()))
   const [idSucursal, setIdSucursal] = useState<number>(0)
+  const [idEspecialidad, setIdEspecialidad] = useState<number>(0)
   const [idsServicios, setIdsServicios] = useState<number[]>([])
   const [notas, setNotas] = useState("")
+
+  const [disponibilidad, setDisponibilidad] = useState<HorariosDisponiblesCitaDto | null>(null)
+  const [disponibilidadLoading, setDisponibilidadLoading] = useState(false)
+  const [disponibilidadError, setDisponibilidadError] = useState<string | null>(null)
 
   const [submitLoading, setSubmitLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -53,13 +71,19 @@ export function usePublicAppointment(initialClinicaId?: number) {
     return (
       idClinica > 0 &&
       idSucursal > 0 &&
+      idEspecialidad > 0 &&
       idsServicios.length > 0 &&
       nombres.trim().length >= 2 &&
       apellidos.trim().length >= 2 &&
       correo.trim().length > 4 &&
       fechaHoraInicioPlan.trim().length > 0
     )
-  }, [idClinica, idSucursal, idsServicios, nombres, apellidos, correo, fechaHoraInicioPlan])
+  }, [idClinica, idSucursal, idEspecialidad, idsServicios, nombres, apellidos, correo, fechaHoraInicioPlan])
+
+  const cuposDisponiblesEspecialidad = useMemo(() => {
+    if (!disponibilidad) return 0
+    return Math.max(0, disponibilidad.citasMaximasPorDiaEspecialidad - disponibilidad.citasOcupadasDiaEspecialidad)
+  }, [disponibilidad])
 
   const loadCatalogo = async (clinicaIdValue: number | string = idClinicaInput) => {
     const clinicaId = parsePositiveInt(clinicaIdValue)
@@ -73,6 +97,7 @@ export function usePublicAppointment(initialClinicaId?: number) {
 
     setCatalogLoading(true)
     setCatalogError(null)
+    setCatalogWarning(null)
 
     try {
       const result = await citaService.obtenerCatalogoPublico(clinicaId)
@@ -87,11 +112,40 @@ export function usePublicAppointment(initialClinicaId?: number) {
 
         return primeraSucursal?.id ?? 0
       })
-      setIdsServicios((prev) => prev.filter((idServicio) => result.servicios.some((servicio) => servicio.id === idServicio)))
+
+      setIdEspecialidad((prev) => {
+        const especialidadesSucursal = result.especialidadesPorSucursal.filter((item) => item.idSucursal === (result.sucursales[0]?.id ?? 0))
+        if (prev > 0 && result.especialidadesPorSucursal.some((item) => item.idEspecialidad === prev)) {
+          return prev
+        }
+
+        return especialidadesSucursal[0]?.idEspecialidad ?? 0
+      })
+      setIdsServicios((prev) => {
+        const seleccionVigente = prev.filter((idServicio) => result.servicios.some((servicio) => servicio.id === idServicio))
+        if (seleccionVigente.length > 0) {
+          return seleccionVigente
+        }
+
+        if (result.servicios.length === 1) {
+          return [result.servicios[0].id]
+        }
+
+        return []
+      })
+
+      if (result.sucursales.length === 0) {
+        setCatalogWarning("La clínica no tiene sucursales activas para agendar.")
+      } else if (result.servicios.length === 0) {
+        setCatalogWarning("La clínica no tiene servicios activos disponibles para agendar.")
+      } else if (result.especialidadesPorSucursal.length === 0) {
+        setCatalogWarning("La clínica no tiene especialidades configuradas por sucursal para agendar.")
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo cargar el catálogo"
       setCatalogError(message)
       setCatalogo(null)
+      setCatalogWarning(null)
     } finally {
       setCatalogLoading(false)
     }
@@ -103,6 +157,75 @@ export function usePublicAppointment(initialClinicaId?: number) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!catalogo || idSucursal <= 0) {
+      setIdEspecialidad(0)
+      return
+    }
+
+    const especialidadesSucursal = catalogo.especialidadesPorSucursal.filter((item) => item.idSucursal === idSucursal)
+    if (especialidadesSucursal.length === 0) {
+      setIdEspecialidad(0)
+      return
+    }
+
+    if (!especialidadesSucursal.some((item) => item.idEspecialidad === idEspecialidad)) {
+      setIdEspecialidad(especialidadesSucursal[0].idEspecialidad)
+    }
+  }, [catalogo, idSucursal, idEspecialidad])
+
+  useEffect(() => {
+    const loadDisponibilidad = async () => {
+      if (idClinica <= 0 || idSucursal <= 0 || idEspecialidad <= 0 || idsServicios.length === 0 || !fechaAgenda) {
+        setDisponibilidad(null)
+        setDisponibilidadError(null)
+        setFechaHoraInicioPlan("")
+        return
+      }
+
+      setDisponibilidadLoading(true)
+      setDisponibilidadError(null)
+
+      try {
+        const result = await citaService.obtenerHorariosDisponiblesPublicos({
+          idClinica,
+          idSucursal,
+          idEspecialidad,
+          fecha: fechaAgenda,
+          idsServicios,
+        })
+
+        setDisponibilidad(result)
+        const cuposDisponibles = Math.max(0, result.citasMaximasPorDiaEspecialidad - result.citasOcupadasDiaEspecialidad)
+        if (cuposDisponibles <= 0) {
+          setDisponibilidadError("No hay cupos disponibles para esta especialidad en la fecha seleccionada.")
+        }
+        setFechaHoraInicioPlan((prev) => {
+          const existeSeleccion = result.horarios.some(
+            (horario) => toDateTimeLocalInputValue(horario.fechaHoraInicioPlan) === prev
+          )
+
+          if (existeSeleccion) {
+            return prev
+          }
+
+          return result.horarios.length > 0
+            ? toDateTimeLocalInputValue(result.horarios[0].fechaHoraInicioPlan)
+            : ""
+        })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "No se pudo cargar la disponibilidad"
+        setDisponibilidadError(message)
+        setDisponibilidad(null)
+        setFechaHoraInicioPlan("")
+      } finally {
+        setDisponibilidadLoading(false)
+      }
+    }
+
+    loadDisponibilidad()
+  }, [idClinica, idSucursal, idEspecialidad, idsServicios, fechaAgenda])
 
   const toggleServicio = (idServicio: number) => {
     setIdsServicios((prev) =>
@@ -120,6 +243,13 @@ export function usePublicAppointment(initialClinicaId?: number) {
       return
     }
 
+    if (cuposDisponiblesEspecialidad <= 0) {
+      const message = "No hay cupos disponibles para esta especialidad en el día seleccionado."
+      setSubmitError(message)
+      showToast(message, "warning")
+      return
+    }
+
     setSubmitLoading(true)
     setSubmitError(null)
     setSubmitSuccess(null)
@@ -128,6 +258,7 @@ export function usePublicAppointment(initialClinicaId?: number) {
       const payload: CreateCitaPublicaDto = {
         idClinica,
         idSucursal,
+        idEspecialidad,
         nombres: nombres.trim(),
         apellidos: apellidos.trim(),
         correo: correo.trim().toLowerCase(),
@@ -145,6 +276,7 @@ export function usePublicAppointment(initialClinicaId?: number) {
       setFechaHoraInicioPlan("")
       setIdsServicios([])
       setNotas("")
+      setDisponibilidad(null)
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo agendar la cita"
       setSubmitError(message)
@@ -162,6 +294,7 @@ export function usePublicAppointment(initialClinicaId?: number) {
     catalogo,
     catalogLoading,
     catalogError,
+    catalogWarning,
     loadCatalogo,
     nombres,
     setNombres,
@@ -173,10 +306,18 @@ export function usePublicAppointment(initialClinicaId?: number) {
     setTelefono,
     fechaHoraInicioPlan,
     setFechaHoraInicioPlan,
+    fechaAgenda,
+    setFechaAgenda,
     idSucursal,
     setIdSucursal,
+    idEspecialidad,
+    setIdEspecialidad,
     idsServicios,
     toggleServicio,
+    disponibilidad,
+    cuposDisponiblesEspecialidad,
+    disponibilidadLoading,
+    disponibilidadError,
     notas,
     setNotas,
     submitLoading,

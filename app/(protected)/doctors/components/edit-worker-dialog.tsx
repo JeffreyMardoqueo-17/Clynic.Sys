@@ -16,7 +16,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SucursalResponseDto } from "@/types/sucursal"
 import { UsuarioRol } from "@/types/usuario"
-import { ROL_OPTIONS } from "./doctors-utils"
+import { ROL_OPTIONS, rolRequiereEspecialidad } from "./doctors-utils"
+
+type EspecialidadOption = {
+  idEspecialidad: number
+  nombreEspecialidad: string
+}
 
 type Props = {
   open: boolean
@@ -26,11 +31,15 @@ type Props = {
   nombreCompleto: string
   onNombreCompletoChange: (value: string) => void
   correo: string
+  correoValido: boolean
   onCorreoChange: (value: string) => void
   rol: UsuarioRol
   onRolChange: (value: UsuarioRol) => void
   idSucursal: string
   onIdSucursalChange: (value: string) => void
+  idEspecialidad: string
+  onIdEspecialidadChange: (value: string) => void
+  especialidadesDisponibles: EspecialidadOption[]
   sucursales: SucursalResponseDto[]
 }
 
@@ -42,13 +51,19 @@ export function EditWorkerDialog({
   nombreCompleto,
   onNombreCompletoChange,
   correo,
+  correoValido,
   onCorreoChange,
   rol,
   onRolChange,
   idSucursal,
   onIdSucursalChange,
+  idEspecialidad,
+  onIdEspecialidadChange,
+  especialidadesDisponibles,
   sucursales,
 }: Props) {
+  const requiereEspecialidad = rolRequiereEspecialidad(rol)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
@@ -80,6 +95,9 @@ export function EditWorkerDialog({
               onChange={(e) => onCorreoChange(e.target.value)}
               required
             />
+            {correo.trim().length > 0 && !correoValido && (
+              <p className="text-xs text-destructive">Ingresa un correo válido (ejemplo: usuario@dominio.com).</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -117,13 +135,33 @@ export function EditWorkerDialog({
             </select>
           </div>
 
+          {requiereEspecialidad && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-especialidad">Especialidad</Label>
+              <select
+                id="edit-especialidad"
+                value={idEspecialidad}
+                onChange={(e) => onIdEspecialidadChange(e.target.value)}
+                className="border-input bg-background ring-offset-background focus-visible:ring-ring/50 focus-visible:border-ring h-9 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
+                required
+              >
+                <option value="">Selecciona especialidad</option>
+                {especialidadesDisponibles.map((especialidad) => (
+                  <option key={especialidad.idEspecialidad} value={String(especialidad.idEspecialidad)}>
+                    {especialidad.nombreEspecialidad}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={submitting}>
                 Cancelar
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={submitting || !nombreCompleto.trim() || !correo.trim()}>
+            <Button type="submit" disabled={submitting || !nombreCompleto.trim() || !correo.trim() || !correoValido}>
               {submitting ? "Guardando..." : "Guardar cambios"}
             </Button>
           </DialogFooter>

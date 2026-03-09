@@ -1,7 +1,9 @@
 import { getApiErrorMessage, getApiUrl } from "@/services/api.utils"
 import {
   AsignarDoctorCitaDto,
+  CambiarEstadoCitaDto,
   CatalogoCitaPublicaDto,
+  HorariosDisponiblesCitaDto,
   CitaResponseDto,
   CreateCitaInternaDto,
   CreateCitaPublicaDto,
@@ -19,6 +21,39 @@ export const citaService = {
 
     if (!response.ok) {
       throw new Error(await getApiErrorMessage(response, "No se pudo cargar el catálogo público"))
+    }
+
+    return response.json()
+  },
+
+  async obtenerHorariosDisponiblesPublicos(params: {
+    idClinica: number
+    idSucursal: number
+    idEspecialidad: number
+    fecha: string
+    idsServicios: number[]
+    intervaloMin?: number
+  }): Promise<HorariosDisponiblesCitaDto> {
+    const query = new URLSearchParams()
+    query.set("idClinica", String(params.idClinica))
+    query.set("idSucursal", String(params.idSucursal))
+    query.set("idEspecialidad", String(params.idEspecialidad))
+    query.set("fecha", params.fecha)
+    if (params.intervaloMin && params.intervaloMin > 0) {
+      query.set("intervaloMin", String(params.intervaloMin))
+    }
+
+    for (const idServicio of params.idsServicios) {
+      query.append("idsServicios", String(idServicio))
+    }
+
+    const response = await fetch(`${getApiUrl()}/api/Citas/publica/horarios-disponibles?${query.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo consultar la disponibilidad de horarios"))
     }
 
     return response.json()
@@ -90,6 +125,20 @@ export const citaService = {
     return response.json()
   },
 
+  async obtenerColaDoctor(): Promise<CitaResponseDto[]> {
+    const response = await fetch(`${getApiUrl()}/api/Citas/doctor/cola`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo cargar la cola del doctor"))
+    }
+
+    return response.json()
+  },
+
   async asignarDoctor(idCita: number, data: AsignarDoctorCitaDto): Promise<CitaResponseDto> {
     const response = await fetch(`${getApiUrl()}/api/Citas/${idCita}/doctor`, {
       method: "PUT",
@@ -102,6 +151,23 @@ export const citaService = {
 
     if (!response.ok) {
       throw new Error(await getApiErrorMessage(response, "No se pudo asignar el doctor"))
+    }
+
+    return response.json()
+  },
+
+  async cambiarEstado(idCita: number, data: CambiarEstadoCitaDto): Promise<CitaResponseDto> {
+    const response = await fetch(`${getApiUrl()}/api/Citas/${idCita}/estado`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo cambiar el estado de la cita"))
     }
 
     return response.json()

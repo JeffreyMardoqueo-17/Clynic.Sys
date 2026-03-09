@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, Eye, Pencil, RotateCcw, Trash2 } from "lucide-react"
+import { AlertTriangle, Eye, Mail, Pencil, RotateCcw, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -21,9 +21,10 @@ type Props = {
   onEdit: (usuario: UsuarioResponseDto) => void
   onDelete: (usuario: UsuarioResponseDto) => void
   onReactivate: (usuario: UsuarioResponseDto) => void
+  onResendInvitation: (usuario: UsuarioResponseDto) => void
 }
 
-export function DoctorsTable({ data, showInactive, onView, onEdit, onDelete, onReactivate }: Props) {
+export function DoctorsTable({ data, showInactive, onView, onEdit, onDelete, onReactivate, onResendInvitation }: Props) {
   return (
     <div className="rounded-md border">
       <Table>
@@ -32,6 +33,7 @@ export function DoctorsTable({ data, showInactive, onView, onEdit, onDelete, onR
             <TableHead>Nombre</TableHead>
             <TableHead>Correo</TableHead>
             <TableHead>Rol</TableHead>
+            <TableHead>Especialidad</TableHead>
             <TableHead>Sucursal</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Creado</TableHead>
@@ -42,7 +44,7 @@ export function DoctorsTable({ data, showInactive, onView, onEdit, onDelete, onR
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
+              <TableCell colSpan={8} className="text-muted-foreground h-24 text-center">
                 {showInactive
                   ? "No hay trabajadores inactivos con esos filtros."
                   : "No hay trabajadores activos con esos filtros."}
@@ -56,8 +58,9 @@ export function DoctorsTable({ data, showInactive, onView, onEdit, onDelete, onR
                 </TableCell>
                 <TableCell>{usuario.correo}</TableCell>
                 <TableCell>
-                  {rolToLabel(usuario.rol)}
+                  {rolToLabel(usuario.idRol, usuario.nombreRol)}
                 </TableCell>
+                <TableCell>{usuario.nombreEspecialidad ?? "N/A"}</TableCell>
                 <TableCell>{usuario.nombreSucursal ?? "Sin asignar"}</TableCell>
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">
@@ -103,27 +106,51 @@ export function DoctorsTable({ data, showInactive, onView, onEdit, onDelete, onR
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     {showInactive ? (
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-7 w-7 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
-                        onClick={() => onReactivate(usuario)}
-                        title="Activar"
-                        aria-label="Activar trabajador"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                      </Button>
+                      <>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7 border-indigo-500/40 bg-indigo-500/10 text-indigo-700 hover:bg-indigo-500/20 dark:text-indigo-300"
+                          onClick={() => onResendInvitation(usuario)}
+                          title="Reenviar invitación"
+                          aria-label="Reenviar invitación"
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20 dark:text-emerald-300"
+                          onClick={() => onReactivate(usuario)}
+                          title="Activar"
+                          aria-label="Activar trabajador"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
                     ) : (
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-7 w-7 border-red-500/40 bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-300"
-                        onClick={() => onDelete(usuario)}
-                        title="Eliminar"
-                        aria-label="Eliminar trabajador"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7 border-indigo-500/40 bg-indigo-500/10 text-indigo-700 hover:bg-indigo-500/20 dark:text-indigo-300"
+                          onClick={() => onResendInvitation(usuario)}
+                          title="Reenviar invitación"
+                          aria-label="Reenviar invitación"
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7 border-red-500/40 bg-red-500/10 text-red-700 hover:bg-red-500/20 dark:text-red-300"
+                          onClick={() => onDelete(usuario)}
+                          title="Eliminar"
+                          aria-label="Eliminar trabajador"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </TableCell>

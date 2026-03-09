@@ -14,7 +14,14 @@ export function getApiUrl() {
     throw new Error("NEXT_PUBLIC_API_URL no está configurada")
   }
 
-  return API_URL
+  // Normaliza valores copiados con errores comunes (espacios, backticks, slash final o ruta swagger).
+  const normalized = API_URL
+    .trim()
+    .replace(/`/g, "")
+    .replace(/\/$/, "")
+    .replace(/\/swagger(?:\/index\.html)?$/i, "")
+
+  return normalized
 }
 
 export async function getApiErrorMessage(

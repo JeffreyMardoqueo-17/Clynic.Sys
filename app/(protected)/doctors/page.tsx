@@ -23,11 +23,15 @@ export default function DoctorsPage() {
     nombreCompleto,
     setNombreCompleto,
     correo,
+    correoValido,
     setCorreo,
     rol,
     setRol,
     idSucursalCrear,
     setIdSucursalCrear,
+    idEspecialidadCrear,
+    setIdEspecialidadCrear,
+    especialidadesDisponiblesCrear,
     sucursalFiltro,
     setSucursalFiltro,
     rolFiltro,
@@ -52,17 +56,22 @@ export default function DoctorsPage() {
     editNombreCompleto,
     setEditNombreCompleto,
     editCorreo,
+    editCorreoValido,
     setEditCorreo,
     editRol,
     setEditRol,
     editIdSucursal,
     setEditIdSucursal,
+    editIdEspecialidad,
+    setEditIdEspecialidad,
+    especialidadesDisponiblesEdit,
     handleCreateWorker,
     openView,
     openEdit,
     handleUpdateWorker,
     handleDeleteWorker,
     handleReactivateWorker,
+    handleResendInvitation,
   } = useDoctorsPage()
 
   if (loading) {
@@ -96,11 +105,15 @@ export default function DoctorsPage() {
           nombreCompleto={nombreCompleto}
           onNombreCompletoChange={setNombreCompleto}
           correo={correo}
+          correoValido={correoValido}
           onCorreoChange={setCorreo}
           rol={rol}
           onRolChange={setRol}
           idSucursalCrear={idSucursalCrear}
           onIdSucursalCrearChange={setIdSucursalCrear}
+          idEspecialidadCrear={idEspecialidadCrear}
+          onIdEspecialidadCrearChange={setIdEspecialidadCrear}
+          especialidadesDisponibles={especialidadesDisponiblesCrear}
           sucursales={sucursales}
           onSubmit={handleCreateWorker}
         />
@@ -136,6 +149,7 @@ export default function DoctorsPage() {
             onEdit={openEdit}
             onDelete={handleDeleteWorker}
             onReactivate={handleReactivateWorker}
+            onResendInvitation={handleResendInvitation}
           />
 
           <DoctorsPagination
@@ -149,13 +163,6 @@ export default function DoctorsPage() {
         </CardContent>
       </Card>
 
-      <Card bordered={false} shadow={false}>
-        <CardContent className="flex items-start gap-2 py-4 text-sm text-muted-foreground">
-          <BriefcaseMedical className="mt-0.5 size-4" />
-          El botón eliminar realiza desactivación lógica (soft delete) desde backend.
-        </CardContent>
-      </Card>
-
       <DoctorViewDialog open={viewOpen} usuario={selectedWorker} onOpenChange={setViewOpen} />
 
       <EditWorkerDialog
@@ -166,11 +173,15 @@ export default function DoctorsPage() {
         nombreCompleto={editNombreCompleto}
         onNombreCompletoChange={setEditNombreCompleto}
         correo={editCorreo}
+        correoValido={editCorreoValido}
         onCorreoChange={setEditCorreo}
         rol={editRol}
         onRolChange={setEditRol}
         idSucursal={editIdSucursal}
         onIdSucursalChange={setEditIdSucursal}
+        idEspecialidad={editIdEspecialidad}
+        onIdEspecialidadChange={setEditIdEspecialidad}
+        especialidadesDisponibles={especialidadesDisponiblesEdit}
         sucursales={sucursales}
       />
     </div>

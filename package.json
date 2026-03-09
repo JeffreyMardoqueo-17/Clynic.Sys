@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@microsoft/signalr": "^10.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -20,6 +21,7 @@
     "react-big-calendar": "^1.19.4",
     "react-day-picker": "^9.13.2",
     "react-dom": "19.2.3",
+    "recharts": "^3.7.0",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

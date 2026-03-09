@@ -1,4 +1,4 @@
-import { ClinicaResponseDto, CreateClinicaDto } from "@/types/clinica"
+import { ClinicaResponseDto } from "@/types/clinica"
 import { getApiErrorMessage, getApiUrl } from "@/services/api.utils"
 
 type RawClinica = {
@@ -52,24 +52,6 @@ export const clinicaService = {
 
     if (!response.ok) {
       throw new Error(await getApiErrorMessage(response, "Error al obtener la clínica"))
-    }
-
-    const result = (await response.json()) as RawClinica
-    return mapClinica(result)
-  },
-
-  async crear(data: CreateClinicaDto): Promise<ClinicaResponseDto> {
-    const response = await fetch(`${getApiUrl()}/Clinicas`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-      credentials: "include",
-    })
-
-    if (!response.ok) {
-      throw new Error(await getApiErrorMessage(response, "Error al crear clínica"))
     }
 
     const result = (await response.json()) as RawClinica

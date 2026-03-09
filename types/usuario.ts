@@ -1,10 +1,14 @@
-export type UsuarioRol = 1 | 2 | 3
+export type UsuarioRol = number
 
 export interface UsuarioResponseDto {
   id: number
   nombreCompleto: string
   correo: string
-  rol: UsuarioRol
+  idRol: UsuarioRol
+  nombreRol: string
+  descripcionRol?: string
+  idEspecialidad?: number
+  nombreEspecialidad?: string
   activo: boolean
   debeCambiarClave?: boolean
   idClinica: number
@@ -19,13 +23,15 @@ export interface CreateTrabajadorDto {
   correo: string
   idClinica: number
   idSucursal: number
-  rol: UsuarioRol
+  idRol: UsuarioRol
+  idEspecialidad?: number
 }
 
 export interface UpdateTrabajadorDto {
   nombreCompleto?: string
   correo?: string
   idSucursal?: number
-  rol?: UsuarioRol
+  idRol?: UsuarioRol
+  idEspecialidad?: number
   activo?: boolean
 }

@@ -22,7 +22,7 @@ export default function UnauthorizedPage() {
 
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3 md:justify-start">
               <Button asChild>
-                <Link href="/">Volver al panel</Link>
+                <Link href="/dashboard">Volver al panel</Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="/appointment">Ir a citas</Link>
