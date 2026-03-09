@@ -29,6 +29,9 @@ export default function DoctorsPage() {
     setRol,
     idSucursalCrear,
     setIdSucursalCrear,
+    idEspecialidadCrear,
+    setIdEspecialidadCrear,
+    especialidadesDisponiblesCrear,
     sucursalFiltro,
     setSucursalFiltro,
     rolFiltro,
@@ -59,6 +62,9 @@ export default function DoctorsPage() {
     setEditRol,
     editIdSucursal,
     setEditIdSucursal,
+    editIdEspecialidad,
+    setEditIdEspecialidad,
+    especialidadesDisponiblesEdit,
     handleCreateWorker,
     openView,
     openEdit,
@@ -105,6 +111,9 @@ export default function DoctorsPage() {
           onRolChange={setRol}
           idSucursalCrear={idSucursalCrear}
           onIdSucursalCrearChange={setIdSucursalCrear}
+          idEspecialidadCrear={idEspecialidadCrear}
+          onIdEspecialidadCrearChange={setIdEspecialidadCrear}
+          especialidadesDisponibles={especialidadesDisponiblesCrear}
           sucursales={sucursales}
           onSubmit={handleCreateWorker}
         />
@@ -170,6 +179,9 @@ export default function DoctorsPage() {
         onRolChange={setEditRol}
         idSucursal={editIdSucursal}
         onIdSucursalChange={setEditIdSucursal}
+        idEspecialidad={editIdEspecialidad}
+        onIdEspecialidadChange={setEditIdEspecialidad}
+        especialidadesDisponibles={especialidadesDisponiblesEdit}
         sucursales={sucursales}
       />
     </div>

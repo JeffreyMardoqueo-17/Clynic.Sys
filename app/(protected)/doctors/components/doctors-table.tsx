@@ -33,6 +33,7 @@ export function DoctorsTable({ data, showInactive, onView, onEdit, onDelete, onR
             <TableHead>Nombre</TableHead>
             <TableHead>Correo</TableHead>
             <TableHead>Rol</TableHead>
+            <TableHead>Especialidad</TableHead>
             <TableHead>Sucursal</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Creado</TableHead>
@@ -43,7 +44,7 @@ export function DoctorsTable({ data, showInactive, onView, onEdit, onDelete, onR
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-muted-foreground h-24 text-center">
+              <TableCell colSpan={8} className="text-muted-foreground h-24 text-center">
                 {showInactive
                   ? "No hay trabajadores inactivos con esos filtros."
                   : "No hay trabajadores activos con esos filtros."}
@@ -57,8 +58,9 @@ export function DoctorsTable({ data, showInactive, onView, onEdit, onDelete, onR
                 </TableCell>
                 <TableCell>{usuario.correo}</TableCell>
                 <TableCell>
-                  {rolToLabel(usuario.rol)}
+                  {rolToLabel(usuario.idRol, usuario.nombreRol)}
                 </TableCell>
+                <TableCell>{usuario.nombreEspecialidad ?? "N/A"}</TableCell>
                 <TableCell>{usuario.nombreSucursal ?? "Sin asignar"}</TableCell>
                 <TableCell>
                   <div className="flex flex-col items-start gap-1">

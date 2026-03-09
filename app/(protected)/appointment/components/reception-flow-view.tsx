@@ -15,16 +15,19 @@ import {
 } from "@/components/ui/dialog"
 import { CitaResponseDto } from "@/types/cita"
 import { SucursalResponseDto } from "@/types/sucursal"
+import { UsuarioResponseDto } from "@/types/usuario"
 
 type ReceptionFlowViewProps = {
-  role: "Admin" | "Doctor" | "Recepcionista" | "Unknown"
+  role: "Admin" | "Doctor" | "Nutricionista" | "Fisioterapeuta" | "Recepcionista" | "Unknown"
   citas: CitaResponseDto[]
   sucursales: SucursalResponseDto[]
+  doctores: UsuarioResponseDto[]
   estadoLoadingId: number | null
   consultaLoading: boolean
   canCreateInternal: boolean
   marcarPresente: (idCita: number) => Promise<void>
-  pasarAConsulta: (idCita: number) => Promise<void>
+  pasarAConsulta: (idCita: number, idDoctorAsignado?: number) => Promise<void>
+  cerrarProcesoRecepcion: (idCita: number) => Promise<void>
   setIdCitaConsulta: (idCita: number) => void
   agendarSeguimiento: (idCitaBase: number, fechaHoraSeguimiento: string) => Promise<void>
   abrirConsultaEnVistaTabla: (idCita: number) => void
@@ -60,11 +63,13 @@ export function ReceptionFlowView({
   role,
   citas,
   sucursales,
+  doctores,
   estadoLoadingId,
   consultaLoading,
   canCreateInternal,
   marcarPresente,
   pasarAConsulta,
+  cerrarProcesoRecepcion,
   setIdCitaConsulta,
   agendarSeguimiento,
   abrirConsultaEnVistaTabla,
@@ -73,7 +78,14 @@ export function ReceptionFlowView({
   const isReceptionOrAdmin = roleLower === "admin" || roleLower === "recepcionista"
   const isAdminOrDoctor = roleLower === "admin" || roleLower === "doctor"
   const [fechaSeguimientoPorCita, setFechaSeguimientoPorCita] = useState<Record<number, string>>({})
+  const [doctorSeleccionadoPorCita, setDoctorSeleccionadoPorCita] = useState<Record<number, number>>({})
+  const [vistaCierre, setVistaCierre] = useState<"pendientes" | "hoy" | "historial">("pendientes")
   const [citaActiva, setCitaActiva] = useState<CitaResponseDto | null>(null)
+
+  const doctorLabelPorId = useMemo(
+    () => Object.fromEntries(doctores.map((doctor) => [doctor.id, doctor.nombreCompleto])),
+    [doctores]
+  )
 
   const colaRecepcion = useMemo(
     () => ordenarPorInicioAsc(citas.filter((cita) => cita.estado === 1 || cita.estado === 2 || cita.estado === 5)),
@@ -81,12 +93,62 @@ export function ReceptionFlowView({
   )
 
   const colaConsulta = useMemo(
-    () => ordenarPorInicioAsc(citas.filter((cita) => cita.estado === 6)),
+    () => ordenarPorInicioAsc(citas.filter((cita) => cita.estado === 6 && !cita.consultaMedica)),
     [citas]
   )
 
-  const colaFinalizadas = useMemo(
-    () => ordenarPorInicioAsc(citas.filter((cita) => cita.estado === 4)),
+  const pendientesCierre = useMemo(
+    () => ordenarPorInicioAsc(citas.filter((cita) => cita.estado === 6 && !!cita.consultaMedica)),
+    [citas]
+  )
+
+  const consultasFinalizadasHoy = useMemo(() => {
+    const ahora = new Date()
+    const anio = ahora.getFullYear()
+    const mes = ahora.getMonth()
+    const dia = ahora.getDate()
+
+    const esMismoDia = (fecha: Date) =>
+      fecha.getFullYear() === anio && fecha.getMonth() === mes && fecha.getDate() === dia
+
+    return [...citas]
+      .filter((cita) => cita.estado === 4 && !!cita.consultaMedica)
+      .filter((cita) => {
+        const fechaRef = cita.fechaHoraFinReal
+          ? new Date(cita.fechaHoraFinReal)
+          : cita.consultaMedica?.fechaConsulta
+            ? new Date(cita.consultaMedica.fechaConsulta)
+            : new Date(cita.fechaHoraInicioPlan)
+
+        return esMismoDia(fechaRef)
+      })
+      .sort((a, b) => {
+        const fechaA = a.fechaHoraFinReal
+          ? new Date(a.fechaHoraFinReal).getTime()
+          : a.consultaMedica?.fechaConsulta
+            ? new Date(a.consultaMedica.fechaConsulta).getTime()
+            : new Date(a.fechaHoraInicioPlan).getTime()
+        const fechaB = b.fechaHoraFinReal
+          ? new Date(b.fechaHoraFinReal).getTime()
+          : b.consultaMedica?.fechaConsulta
+            ? new Date(b.consultaMedica.fechaConsulta).getTime()
+            : new Date(b.fechaHoraInicioPlan).getTime()
+        return fechaB - fechaA
+      })
+  }, [citas])
+
+  const historialConsultas = useMemo(
+    () => [...citas]
+      .filter((cita) => !!cita.consultaMedica)
+      .sort((a, b) => {
+        const fechaA = a.consultaMedica?.fechaConsulta
+          ? new Date(a.consultaMedica.fechaConsulta).getTime()
+          : new Date(a.fechaHoraInicioPlan).getTime()
+        const fechaB = b.consultaMedica?.fechaConsulta
+          ? new Date(b.consultaMedica.fechaConsulta).getTime()
+          : new Date(b.fechaHoraInicioPlan).getTime()
+        return fechaB - fechaA
+      }),
     [citas]
   )
 
@@ -99,7 +161,7 @@ export function ReceptionFlowView({
   return (
     <>
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className="shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-2"><ClipboardCheck className="size-5 text-primary" /> Recepción</span>
@@ -114,7 +176,7 @@ export function ReceptionFlowView({
               <button
                 key={cita.id}
                 type="button"
-                className="w-full space-y-2 rounded-lg border border-primary/25 bg-background/80 p-3 text-left shadow-sm transition hover:bg-background"
+                className="w-full space-y-2 rounded-lg border border-orange-200 bg-orange-50/70 p-3 text-left shadow-sm transition hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 onClick={() => setCitaActiva(cita)}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -124,6 +186,13 @@ export function ReceptionFlowView({
                 <p className="text-xs text-muted-foreground">
                   {new Date(cita.fechaHoraInicioPlan).toLocaleString()} · {sucursales.find((s) => s.id === cita.idSucursal)?.nombre ?? `Sucursal ${cita.idSucursal}`}
                 </p>
+                {(cita.estado === 5 || cita.estado === 6) && (
+                  <p className="text-xs text-muted-foreground">
+                    {cita.idDoctor
+                      ? `Lo atenderá ${doctorLabelPorId[cita.idDoctor] ?? `Doctor #${cita.idDoctor}`}`
+                      : "Doctor pendiente de asignación"}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {isReceptionOrAdmin && (cita.estado === 1 || cita.estado === 2) && (
                     <Badge variant="outline">Click para marcar llegada</Badge>
@@ -137,10 +206,10 @@ export function ReceptionFlowView({
           </CardContent>
         </Card>
 
-        <Card className="border-secondary/30 bg-secondary/10">
+        <Card className="shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-2"><Stethoscope className="size-5 text-secondary-foreground" /> Consulta Médica</span>
+              <span className="inline-flex items-center gap-2"><Stethoscope className="size-5 text-primary" /> Consulta Médica</span>
               <Badge variant="ghost">{colaConsulta.length}</Badge>
             </CardTitle>
             <CardDescription>Pacientes en atención por doctor (ordenado por fecha/hora)</CardDescription>
@@ -152,7 +221,7 @@ export function ReceptionFlowView({
               <button
                 key={cita.id}
                 type="button"
-                className="w-full space-y-2 rounded-lg border border-secondary/30 bg-background/80 p-3 text-left shadow-sm transition hover:bg-background"
+                className="w-full space-y-2 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-left shadow-sm transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 onClick={() => setCitaActiva(cita)}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -166,23 +235,58 @@ export function ReceptionFlowView({
           </CardContent>
         </Card>
 
-        <Card className="border-chart-3/30 bg-chart-3/10">
+        <Card className="shadow-sm">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-2"><CheckCircle2 className="size-5 text-chart-3" /> Cierre y Seguimiento</span>
-              <Badge>{colaFinalizadas.length}</Badge>
+              <span className="inline-flex items-center gap-2"><CheckCircle2 className="size-5 text-primary" /> Cierre y Seguimiento</span>
+              <Badge>{vistaCierre === "pendientes" ? pendientesCierre.length : vistaCierre === "hoy" ? consultasFinalizadasHoy.length : historialConsultas.length}</Badge>
             </CardTitle>
             <CardDescription>Fin de atención y reagendamiento desde recepción (ordenado por fecha/hora)</CardDescription>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={vistaCierre === "pendientes" ? "default" : "outline"}
+                onClick={() => setVistaCierre("pendientes")}
+              >
+                Pendientes de cierre
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={vistaCierre === "hoy" ? "default" : "outline"}
+                onClick={() => setVistaCierre("hoy")}
+              >
+                Consultas finalizadas hoy
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={vistaCierre === "historial" ? "default" : "outline"}
+                onClick={() => setVistaCierre("historial")}
+              >
+                Historial de consultas
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            {colaFinalizadas.length === 0 && <p className="text-sm text-muted-foreground">Sin citas finalizadas.</p>}
+            {vistaCierre === "pendientes" && pendientesCierre.length === 0 && <p className="text-sm text-muted-foreground">No hay procesos pendientes de cierre.</p>}
+            {vistaCierre === "hoy" && consultasFinalizadasHoy.length === 0 && <p className="text-sm text-muted-foreground">No hay consultas finalizadas hoy.</p>}
+            {vistaCierre === "historial" && historialConsultas.length === 0 && <p className="text-sm text-muted-foreground">No hay historial de consultas.</p>}
 
-            {colaFinalizadas.map((cita) => (
-              <button
+            {vistaCierre === "pendientes" && pendientesCierre.map((cita) => (
+              <div
                 key={cita.id}
-                type="button"
-                className="w-full space-y-2 rounded-lg border border-chart-3/35 bg-background/85 p-3 text-left shadow-sm transition hover:bg-background"
+                role="button"
+                tabIndex={0}
+                className="w-full space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-left shadow-sm transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 onClick={() => setCitaActiva(cita)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault()
+                    setCitaActiva(cita)
+                  }
+                }}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold">#{cita.id} · {cita.nombrePaciente}</p>
@@ -194,7 +298,7 @@ export function ReceptionFlowView({
                   <div className="grid gap-2 md:grid-cols-[1fr_auto]" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="datetime-local"
-                      className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm ring-1 ring-chart-3/20"
+                      className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                       value={fechaSeguimientoPorCita[cita.id] ?? ""}
                       onChange={(e) =>
                         setFechaSeguimientoPorCita((prev) => ({
@@ -206,13 +310,67 @@ export function ReceptionFlowView({
                     <Button
                       size="sm"
                       variant="default"
-                      className="bg-chart-3/80 text-foreground hover:bg-chart-3"
-                      onClick={() => agendarSeguimiento(cita.id, fechaSeguimientoPorCita[cita.id] ?? "")}
+                      onClick={async () => {
+                        await agendarSeguimiento(cita.id, fechaSeguimientoPorCita[cita.id] ?? "")
+                        setFechaSeguimientoPorCita((prev) => ({ ...prev, [cita.id]: "" }))
+                      }}
                     >
-                      Agendar seguimiento
+                      Agendar seguimiento y cerrar
                     </Button>
+
+                    {isReceptionOrAdmin && cita.estado === 6 && cita.consultaMedica && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          await cerrarProcesoRecepcion(cita.id)
+                        }}
+                      >
+                        Cerrar proceso
+                      </Button>
+                    )}
                   </div>
                 )}
+              </div>
+            ))}
+
+            {vistaCierre === "hoy" && consultasFinalizadasHoy.map((cita) => (
+              <button
+                key={cita.id}
+                type="button"
+                className="w-full space-y-2 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-left shadow-sm transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                onClick={() => setCitaActiva(cita)}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">#{cita.id} · {cita.nombrePaciente}</p>
+                  <Badge>{estadoLabel(cita.estado)}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Cierre: {new Date(cita.fechaHoraFinReal ?? cita.consultaMedica?.fechaConsulta ?? cita.fechaHoraInicioPlan).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Doctor: {cita.idDoctor ? (doctorLabelPorId[cita.idDoctor] ?? `Doctor #${cita.idDoctor}`) : "Sin asignar"}
+                </p>
+              </button>
+            ))}
+
+            {vistaCierre === "historial" && historialConsultas.map((cita) => (
+              <button
+                key={cita.id}
+                type="button"
+                className="w-full space-y-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-left shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                onClick={() => setCitaActiva(cita)}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">#{cita.id} · {cita.nombrePaciente}</p>
+                  <Badge>{estadoLabel(cita.estado)}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Consulta: {new Date(cita.consultaMedica?.fechaConsulta ?? cita.fechaHoraInicioPlan).toLocaleString()}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Diagnóstico: {cita.consultaMedica?.diagnostico || "Sin diagnóstico"}
+                </p>
               </button>
             ))}
           </CardContent>
@@ -261,6 +419,39 @@ export function ReceptionFlowView({
                   <p className="mt-2"><span className="font-semibold">Notas médicas:</span> {citaActiva.consultaMedica.notasMedicas}</p>
                 )}
               </div>
+
+              {isReceptionOrAdmin && citaActiva.estado === 5 && (
+                <div className="rounded-md border p-3">
+                  <p className="font-semibold">Asignar doctor para consulta</p>
+                  <select
+                    className="border-input bg-background mt-2 w-full rounded-md border px-3 py-2 text-sm"
+                    value={doctorSeleccionadoPorCita[citaActiva.id] ?? citaActiva.idDoctor ?? ""}
+                    onChange={(e) =>
+                      setDoctorSeleccionadoPorCita((prev) => ({
+                        ...prev,
+                        [citaActiva.id]: Number(e.target.value),
+                      }))
+                    }
+                  >
+                    <option value="">Selecciona doctor</option>
+                    {doctores.map((doctor) => (
+                      <option key={doctor.id} value={doctor.id}>
+                        {doctor.nombreCompleto}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {(() => {
+                      const idDoctorAsignado = doctorSeleccionadoPorCita[citaActiva.id] ?? citaActiva.idDoctor
+                      if (!idDoctorAsignado) {
+                        return "Selecciona quién atenderá esta cita para poder transferirla."
+                      }
+
+                      return `Lo atenderá ${doctorLabelPorId[idDoctorAsignado] ?? `Doctor #${idDoctorAsignado}`}.`
+                    })()}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -282,9 +473,9 @@ export function ReceptionFlowView({
               {isReceptionOrAdmin && citaActiva.estado === 5 && (
                 <Button
                   type="button"
-                  variant="secondary"
                   onClick={async () => {
-                    await pasarAConsulta(citaActiva.id)
+                    const idDoctorAsignado = doctorSeleccionadoPorCita[citaActiva.id] ?? citaActiva.idDoctor
+                    await pasarAConsulta(citaActiva.id, idDoctorAsignado)
                     cerrarDialogo()
                   }}
                   disabled={estadoLoadingId === citaActiva.id}
@@ -304,6 +495,20 @@ export function ReceptionFlowView({
                   }}
                 >
                   Abrir formulario de consulta
+                </Button>
+              )}
+
+              {isReceptionOrAdmin && citaActiva.estado === 6 && !!citaActiva.consultaMedica && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    await cerrarProcesoRecepcion(citaActiva.id)
+                    cerrarDialogo()
+                  }}
+                  disabled={estadoLoadingId === citaActiva.id}
+                >
+                  {estadoLoadingId === citaActiva.id ? "Actualizando..." : "Cerrar proceso (Gracias por venir)"}
                 </Button>
               )}
 

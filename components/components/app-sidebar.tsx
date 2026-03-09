@@ -37,26 +37,27 @@ import { authService } from "@/services/auth.service"
 import { AppRole, normalizeRole } from "@/lib/authorization"
 
 const navItems: Array<{ title: string; url: string; icon: typeof LayoutDashboard; roles: AppRole[] }> = [
-  { title: "Home", url: "/", icon: LayoutDashboard, roles: ["Admin", "Doctor", "Recepcionista"] },
-  { title: "Mi Clínica", url: "/clinic", icon: Hospital, roles: ["Admin", "Doctor", "Recepcionista"] },
-  { title: "Pacientes", url: "/patients", icon: Users, roles: ["Admin", "Doctor", "Recepcionista"] },
-  { title: "Citas", url: "/appointment", icon: CalendarDays, roles: ["Admin", "Doctor", "Recepcionista"] },
-  { title: "Cita Servicios", url: "/appointment-services", icon: CalendarDays, roles: ["Admin", "Doctor", "Recepcionista"] },
+  { title: "Home", url: "/dashboard", icon: LayoutDashboard, roles: ["Admin", "Doctor", "Nutricionista", "Fisioterapeuta", "Recepcionista"] },
+  { title: "Mi Clínica", url: "/clinic", icon: Hospital, roles: ["Admin", "Doctor", "Nutricionista", "Fisioterapeuta", "Recepcionista"] },
+  { title: "Pacientes", url: "/patients", icon: Users, roles: ["Admin", "Doctor", "Nutricionista", "Fisioterapeuta", "Recepcionista"] },
+  { title: "Citas", url: "/appointment", icon: CalendarDays, roles: ["Admin", "Doctor", "Nutricionista", "Fisioterapeuta", "Recepcionista"] },
+  { title: "Panel Doctor", url: "/doctor-panel", icon: Stethoscope, roles: ["Doctor", "Nutricionista", "Fisioterapeuta"] },
+  { title: "Cita Servicios", url: "/appointment-services", icon: CalendarDays, roles: ["Admin", "Doctor", "Nutricionista", "Fisioterapeuta", "Recepcionista"] },
   { title: "Trabajadores", url: "/doctors", icon: Stethoscope, roles: ["Admin"] },
   { title: "Sucursales", url: "/branches", icon: Building2, roles: ["Admin"] },
   { title: "Servicios", url: "/services", icon: BriefcaseMedical, roles: ["Admin"] },
-  { title: "Historial Clínico", url: "/records", icon: FileText, roles: ["Admin", "Doctor"] },
+  { title: "Historial Clínico", url: "/records", icon: FileText, roles: ["Admin", "Doctor", "Nutricionista", "Fisioterapeuta"] },
   { title: "Facturación", url: "/billing", icon: CreditCard, roles: ["Admin"] },
   { title: "Reportes", url: "/reports", icon: BarChart3, roles: ["Admin"] },
 ]
 
 const secondaryItems: Array<{ title: string; url: string; icon: typeof Settings; roles: AppRole[] }> = [
   { title: "Configuración", url: "/settings", icon: Settings, roles: ["Admin"] },
-  { title: "Ayuda", url: "/help", icon: HelpCircle, roles: ["Admin", "Doctor", "Recepcionista"] },
+  { title: "Ayuda", url: "/help", icon: HelpCircle, roles: ["Admin", "Doctor", "Nutricionista", "Fisioterapeuta", "Recepcionista"] },
 ]
 
 type AppSidebarProps = {
-  role?: string
+  role?: string | number
 }
 
 export function AppSidebar({ role }: AppSidebarProps) {

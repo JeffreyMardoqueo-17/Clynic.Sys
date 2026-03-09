@@ -22,8 +22,8 @@ export function BranchCard({
   onConfigurarHorarios,
 }: BranchCardProps) {
   return (
-    <Card className="hc-soft-card overflow-hidden border-primary/10 py-0">
-      <div className="hc-hero bg-gradient-to-r from-primary/10 via-accent/30 to-background p-3">
+    <Card className="hc-soft-card overflow-hidden py-0">
+      <div className="hc-hero p-3">
         <div className="flex items-center gap-3">
           <div className="hc-icon-badge flex size-11 items-center justify-center">
             <ImageIcon className="size-5" />
@@ -49,7 +49,7 @@ export function BranchCard({
       </CardHeader>
 
       <CardContent className="space-y-2.5 pb-4">
-        <div className="hc-info-chip bg-accent/35 p-2.5 text-xs">
+        <div className="hc-info-chip p-2.5 text-xs">
           <p className="mb-1 flex items-center gap-1.5 font-medium text-foreground">
             <Clock3 className="size-3.5 text-muted-foreground" />
             Horarios
@@ -57,7 +57,7 @@ export function BranchCard({
           <p className="text-muted-foreground">{resumenHorario}</p>
         </div>
 
-        <div className="hc-info-chip bg-primary/5 p-2.5 text-xs">
+        <div className="hc-info-chip p-2.5 text-xs">
           <p className="mb-1 font-medium">Asuetos</p>
           <p className="text-muted-foreground">{resumenAsuetos}</p>
         </div>

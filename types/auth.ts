@@ -11,7 +11,43 @@ export interface RegisterDto {
   clave: string;
   idClinica: number;
   idSucursal?: number;
-  rol: 1 | 2 | 3;
+  idRol: number;
+  rol?: number;
+  idEspecialidad?: number;
+}
+
+export interface RegisterClinicDto {
+  nombreClinica: string;
+  telefonoClinica: string;
+  direccionClinica: string;
+  nombreCompleto: string;
+  correo: string;
+  clave: string;
+}
+
+export interface RolDto {
+  id: number;
+  nombre: string;
+  descripcion?: string;
+  activo: boolean;
+  idClinica?: number | null;
+  idSucursal?: number | null;
+}
+
+export interface EspecialidadDto {
+  id: number;
+  idClinica?: number | null;
+  nombre: string;
+  descripcion?: string;
+  activa: boolean;
+}
+
+export interface EspecialidadSucursalDto {
+  id: number;
+  idSucursal: number;
+  idEspecialidad: number;
+  nombreEspecialidad: string;
+  activa: boolean;
 }
 
 export interface ForgotPasswordDto {
@@ -35,7 +71,11 @@ export interface UsuarioResponseDto {
   id: number;
   nombreCompleto: string;
   correo: string;
-  rol: string;
+  rol?: string | number;
+  idRol?: number;
+  nombreRol?: string;
+  idEspecialidad?: number;
+  nombreEspecialidad?: string;
   activo: boolean;
   debeCambiarClave?: boolean;
   idClinica: number;
@@ -48,5 +88,7 @@ export interface UsuarioResponseDto {
 export interface AuthResponseDto {
   exito: boolean;
   mensaje: string;
+  token?: string;
+  expiracion?: string;
   usuario?: UsuarioResponseDto;
 }

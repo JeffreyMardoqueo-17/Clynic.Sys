@@ -17,7 +17,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SucursalResponseDto } from "@/types/sucursal"
 import { UsuarioRol } from "@/types/usuario"
-import { ROL_OPTIONS } from "./doctors-utils"
+import { ROL_OPTIONS, rolRequiereEspecialidad } from "./doctors-utils"
+
+type EspecialidadOption = {
+  idEspecialidad: number
+  nombreEspecialidad: string
+}
 
 type Props = {
   open: boolean
@@ -32,6 +37,9 @@ type Props = {
   onRolChange: (value: UsuarioRol) => void
   idSucursalCrear: string
   onIdSucursalCrearChange: (value: string) => void
+  idEspecialidadCrear: string
+  onIdEspecialidadCrearChange: (value: string) => void
+  especialidadesDisponibles: EspecialidadOption[]
   sucursales: SucursalResponseDto[]
   onSubmit: (e: React.FormEvent) => Promise<void> | void
 }
@@ -49,9 +57,14 @@ export function CreateWorkerDialog({
   onRolChange,
   idSucursalCrear,
   onIdSucursalCrearChange,
+  idEspecialidadCrear,
+  onIdEspecialidadCrearChange,
+  especialidadesDisponibles,
   sucursales,
   onSubmit,
 }: Props) {
+  const requiereEspecialidad = rolRequiereEspecialidad(rol)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
@@ -130,6 +143,26 @@ export function CreateWorkerDialog({
               ))}
             </select>
           </div>
+
+          {requiereEspecialidad && (
+            <div className="space-y-2">
+              <Label htmlFor="especialidad-trabajador">Especialidad</Label>
+              <select
+                id="especialidad-trabajador"
+                value={idEspecialidadCrear}
+                onChange={(e) => onIdEspecialidadCrearChange(e.target.value)}
+                className="border-input bg-background ring-offset-background focus-visible:ring-ring/50 focus-visible:border-ring h-9 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
+                required
+              >
+                <option value="">Selecciona especialidad</option>
+                {especialidadesDisponibles.map((especialidad) => (
+                  <option key={especialidad.idEspecialidad} value={String(especialidad.idEspecialidad)}>
+                    {especialidad.nombreEspecialidad}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <DialogFooter>
             <DialogClose asChild>

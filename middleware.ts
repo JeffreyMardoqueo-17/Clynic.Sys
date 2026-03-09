@@ -8,7 +8,7 @@ function isAuthPath(pathname: string) {
 }
 
 function isPublicPath(pathname: string) {
-  return pathname === "/agendar-cita" || pathname.startsWith("/agendar-cita/")
+  return pathname === "/" || pathname === "/agendar-cita" || pathname.startsWith("/agendar-cita/")
 }
 
 export async function middleware(request: NextRequest) {
@@ -16,12 +16,8 @@ export async function middleware(request: NextRequest) {
   const authPath = isAuthPath(pathname)
   const publicPath = isPublicPath(pathname)
 
-  if (publicPath) {
-    return NextResponse.next()
-  }
-
   if (!API_URL) {
-    if (authPath) {
+    if (authPath || publicPath) {
       return NextResponse.next()
     }
 
@@ -40,15 +36,29 @@ export async function middleware(request: NextRequest) {
     })
 
     if (response.ok) {
-      const profile = (await response.json()) as { rol?: string | number }
-      const role = normalizeRole(profile?.rol)
+      const profile = (await response.json()) as {
+        rol?: string | number
+        nombreRol?: string
+        idRol?: number
+      }
+
+      const role = normalizeRole(profile?.rol ?? profile?.nombreRol ?? profile?.idRol)
+
+      // Allow rendering unauthorized page without re-triggering authorization redirects.
+      if (pathname === "/401") {
+        return NextResponse.next()
+      }
+
+      if (pathname === "/") {
+        return NextResponse.redirect(new URL("/dashboard", request.url))
+      }
 
       if (!authPath && !canAccessPath(role, pathname)) {
         return NextResponse.redirect(new URL("/401", request.url))
       }
 
       if (authPath) {
-        return NextResponse.redirect(new URL("/", request.url))
+        return NextResponse.redirect(new URL("/dashboard", request.url))
       }
 
       return NextResponse.next()
@@ -57,7 +67,7 @@ export async function middleware(request: NextRequest) {
     // ignored
   }
 
-  if (authPath) {
+  if (authPath || publicPath) {
     return NextResponse.next()
   }
 

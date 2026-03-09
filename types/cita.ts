@@ -25,12 +25,15 @@ export interface CitaResponseDto {
   idClinica: number
   idSucursal: number
   idPaciente: number
+  idEspecialidad: number
+  nombreEspecialidad: string
   idDoctor?: number
   nombrePaciente: string
   correoPaciente: string
   telefonoPaciente: string
   fechaHoraInicioPlan: string
   fechaHoraFinPlan: string
+  duracionEstimadaMin: number
   fechaHoraInicioReal?: string
   fechaHoraFinReal?: string
   estado: EstadoCita
@@ -45,6 +48,7 @@ export interface CitaResponseDto {
 export interface CreateCitaPublicaDto {
   idClinica: number
   idSucursal: number
+  idEspecialidad: number
   nombres: string
   apellidos: string
   telefono?: string
@@ -58,6 +62,7 @@ export interface CreateCitaInternaDto {
   idClinica: number
   idSucursal: number
   idPaciente: number
+  idEspecialidad: number
   idDoctor?: number
   fechaHoraInicioPlan: string
   idsServicios: number[]
@@ -99,5 +104,32 @@ export interface CatalogoServicioDto {
 export interface CatalogoCitaPublicaDto {
   idClinica: number
   sucursales: CatalogoSucursalDto[]
+  especialidadesPorSucursal: CatalogoEspecialidadSucursalDto[]
   servicios: CatalogoServicioDto[]
+}
+
+export interface CatalogoEspecialidadSucursalDto {
+  idSucursal: number
+  idEspecialidad: number
+  nombreEspecialidad: string
+  descripcionEspecialidad: string
+  citasMaximasPorDia: number
+}
+
+export interface HorarioDisponibleItemDto {
+  fechaHoraInicioPlan: string
+  fechaHoraFinPlan: string
+  horaLabel: string
+}
+
+export interface HorariosDisponiblesCitaDto {
+  idClinica: number
+  idSucursal: number
+  idEspecialidad: number
+  fecha: string
+  duracionEstimadaMin: number
+  intervaloMin: number
+  citasMaximasPorDiaEspecialidad: number
+  citasOcupadasDiaEspecialidad: number
+  horarios: HorarioDisponibleItemDto[]
 }

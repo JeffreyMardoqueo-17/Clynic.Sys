@@ -3,13 +3,16 @@
 import {
   LoginDto,
   RegisterDto,
+  RegisterClinicDto,
   AuthResponseDto,
   UsuarioResponseDto,
   ForgotPasswordDto,
   ResetPasswordDto,
   ChangePasswordDto,
+  RolDto,
+  EspecialidadDto,
+  EspecialidadSucursalDto,
 } from "@/types/auth";
-import { ClinicaResponseDto, CreateClinicaDto } from "@/types/clinica";
 import { getApiErrorMessage, getApiUrl } from "@/services/api.utils";
 
 type ApiMessageResponse = {
@@ -88,8 +91,8 @@ export const authService = {
     return result;
   },
 
-  async createOnboardingClinic(data: CreateClinicaDto): Promise<ClinicaResponseDto> {
-    const response = await fetch(`${getApiUrl()}/auth/onboarding/clinic`, {
+  async registerClinic(data: RegisterClinicDto): Promise<AuthResponseDto> {
+    const response = await fetch(`${getApiUrl()}/auth/register-clinic`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -97,12 +100,30 @@ export const authService = {
       body: JSON.stringify(data),
       credentials: "include",
     });
+    const responseClone = response.clone();
 
-    if (!response.ok) {
-      throw new Error(await getApiErrorMessage(response, "No se pudo crear la clínica"));
+    let result: AuthResponseDto = {
+      exito: false,
+      mensaje: "Error al registrar clínica",
+    };
+    let raw: Record<string, unknown> = {};
+
+    try {
+      raw = (await response.json()) as Record<string, unknown>;
+      result = raw as unknown as AuthResponseDto;
+    } catch {
+      // ignored
     }
 
-    return response.json();
+    if (!response.ok) {
+      throw new Error(
+        result.mensaje ||
+          (typeof raw.message === "string" ? raw.message : "") ||
+          (await getApiErrorMessage(responseClone, "Error al registrar clínica"))
+      );
+    }
+
+    return result;
   },
 
   async getProfile(): Promise<UsuarioResponseDto> {
@@ -119,11 +140,58 @@ export const authService = {
       throw new Error(await getApiErrorMessage(response, "Error al obtener el perfil"));
     }
 
-    return response.json();
+    const raw = (await response.json()) as UsuarioResponseDto;
+
+    return {
+      ...raw,
+      rol: raw.rol ?? raw.nombreRol ?? raw.idRol,
+    };
   },
 
   async GetProfile(): Promise<UsuarioResponseDto> {
     return this.getProfile();
+  },
+
+  async getRolesBySucursal(idClinica: number, idSucursal: number): Promise<RolDto[]> {
+    const response = await fetch(`${getApiUrl()}/api/CatalogoPersonal/roles/clinica/${idClinica}/sucursal/${idSucursal}`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudieron obtener los roles de la sucursal"));
+    }
+
+    return (await response.json()) as RolDto[];
+  },
+
+  async getEspecialidadesByClinica(idClinica: number): Promise<EspecialidadDto[]> {
+    const response = await fetch(`${getApiUrl()}/api/CatalogoPersonal/especialidades/clinica/${idClinica}`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudieron obtener las especialidades de la clínica"));
+    }
+
+    return (await response.json()) as EspecialidadDto[];
+  },
+
+  async getEspecialidadesBySucursal(idClinica: number, idSucursal: number): Promise<EspecialidadSucursalDto[]> {
+    const response = await fetch(`${getApiUrl()}/api/CatalogoPersonal/especialidades/clinica/${idClinica}/sucursal/${idSucursal}`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudieron obtener las especialidades de la sucursal"));
+    }
+
+    return (await response.json()) as EspecialidadSucursalDto[];
   },
 
   async forgotPassword(data: ForgotPasswordDto): Promise<string> {

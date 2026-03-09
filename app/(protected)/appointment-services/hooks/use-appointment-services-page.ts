@@ -11,13 +11,28 @@ import { CitaServicioResponseDto } from "@/types/cita-servicio"
 import { CitaResponseDto } from "@/types/cita"
 import { ServicioResponseDto } from "@/types/servicio"
 
+function toDateTimeQuery(date: Date, endOfDay = false) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return endOfDay ? `${year}-${month}-${day}T23:59:59` : `${year}-${month}-${day}T00:00:00`
+}
+
+function getTodayQueryRange() {
+  const today = new Date()
+  return {
+    fechaDesde: toDateTimeQuery(today, false),
+    fechaHasta: toDateTimeQuery(today, true),
+  }
+}
+
 export function useAppointmentServicesPage() {
   const { showToast } = useToast()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [role, setRole] = useState<"Admin" | "Doctor" | "Recepcionista" | "Unknown">("Unknown")
+  const [role, setRole] = useState<"Admin" | "Doctor" | "Nutricionista" | "Fisioterapeuta" | "Recepcionista" | "Unknown">("Unknown")
   const [idClinica, setIdClinica] = useState(0)
 
   const [citas, setCitas] = useState<CitaResponseDto[]>([])
@@ -55,8 +70,13 @@ export function useAppointmentServicesPage() {
       setRole(normalizedRole)
       setIdClinica(profile.idClinica)
 
+      const todayRange = getTodayQueryRange()
+
       const [citasData, serviciosData] = await Promise.all([
-        citaService.obtenerPorClinica(profile.idClinica),
+        citaService.obtenerPorClinica(profile.idClinica, {
+          fechaDesde: todayRange.fechaDesde,
+          fechaHasta: todayRange.fechaHasta,
+        }),
         servicioService.obtenerPorClinica(profile.idClinica),
       ])
 

@@ -10,6 +10,16 @@ type RawUsuario = {
   Correo?: string
   rol?: number
   Rol?: number
+  idRol?: number
+  IdRol?: number
+  nombreRol?: string
+  NombreRol?: string
+  descripcionRol?: string
+  DescripcionRol?: string
+  idEspecialidad?: number | null
+  IdEspecialidad?: number | null
+  nombreEspecialidad?: string | null
+  NombreEspecialidad?: string | null
   activo?: boolean
   Activo?: boolean
   debeCambiarClave?: boolean
@@ -31,7 +41,11 @@ function mapUsuario(raw: RawUsuario): UsuarioResponseDto {
     id: raw.id ?? raw.Id ?? 0,
     nombreCompleto: raw.nombreCompleto ?? raw.NombreCompleto ?? "",
     correo: raw.correo ?? raw.Correo ?? "",
-    rol: (raw.rol ?? raw.Rol ?? 2) as 1 | 2 | 3,
+    idRol: raw.idRol ?? raw.IdRol ?? raw.rol ?? raw.Rol ?? 2,
+    nombreRol: raw.nombreRol ?? raw.NombreRol ?? "Doctor",
+    descripcionRol: raw.descripcionRol ?? raw.DescripcionRol,
+    idEspecialidad: raw.idEspecialidad ?? raw.IdEspecialidad ?? undefined,
+    nombreEspecialidad: raw.nombreEspecialidad ?? raw.NombreEspecialidad ?? undefined,
     activo: raw.activo ?? raw.Activo ?? false,
     debeCambiarClave: raw.debeCambiarClave ?? raw.DebeCambiarClave ?? false,
     idClinica: raw.idClinica ?? raw.IdClinica ?? 0,

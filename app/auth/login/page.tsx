@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +20,8 @@ import { authService } from "@/services/auth.service"
 
 export default function Page() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const onboardingAutoOpenRef = useRef(false)
   const [correo, setCorreo] = useState("")
   const [clave, setClave] = useState("")
   const [loading, setLoading] = useState(false)
@@ -40,7 +42,6 @@ export default function Page() {
   const [nombreClinica, setNombreClinica] = useState("")
   const [telefonoClinica, setTelefonoClinica] = useState("")
   const [direccionClinica, setDireccionClinica] = useState("")
-  const [idClinicaCreada, setIdClinicaCreada] = useState<number | null>(null)
 
   const [nombreAdmin, setNombreAdmin] = useState("")
   const [correoAdmin, setCorreoAdmin] = useState("")
@@ -55,7 +56,6 @@ export default function Page() {
     setNombreClinica("")
     setTelefonoClinica("")
     setDireccionClinica("")
-    setIdClinicaCreada(null)
 
     setNombreAdmin("")
     setCorreoAdmin("")
@@ -71,11 +71,23 @@ export default function Page() {
   }
 
   const getSafeNextPath = () => {
-    if (typeof window === "undefined") return "/"
+    if (typeof window === "undefined") return "/dashboard"
 
     const nextPath = new URLSearchParams(window.location.search).get("next")
-    return nextPath && nextPath.startsWith("/") ? nextPath : "/"
+    return nextPath && nextPath.startsWith("/") ? nextPath : "/dashboard"
   }
+
+  useEffect(() => {
+    if (onboardingAutoOpenRef.current) return
+
+    const onboardingQuery = searchParams.get("onboarding")
+    const shouldAutoOpen = onboardingQuery === "1" || onboardingQuery === "true"
+
+    if (shouldAutoOpen) {
+      onboardingAutoOpenRef.current = true
+      setOnboardingOpen(true)
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -173,34 +185,15 @@ export default function Page() {
       return
     }
 
-    setOnboardingLoading(true)
-
-    try {
-      const clinica = await authService.createOnboardingClinic({
-        nombre: nombreClinica.trim(),
-        telefono: telefonoClinica.trim(),
-        direccion: direccionClinica.trim(),
-      })
-
-      setIdClinicaCreada(clinica.id)
-      setOnboardingStep(2)
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setOnboardingError(err.message || "No se pudo crear la clínica")
-      } else {
-        setOnboardingError("No se pudo crear la clínica")
-      }
-    } finally {
-      setOnboardingLoading(false)
-    }
+    setOnboardingStep(2)
   }
 
   const handleCrearCuentaAdminStep = async (e: React.FormEvent) => {
     e.preventDefault()
     setOnboardingError(null)
 
-    if (!idClinicaCreada || idClinicaCreada <= 0) {
-      setOnboardingError("Primero debes crear la clínica")
+    if (!nombreClinica.trim() || !telefonoClinica.trim() || !direccionClinica.trim()) {
+      setOnboardingError("Completa los datos de la clínica")
       return
     }
 
@@ -217,12 +210,13 @@ export default function Page() {
     setOnboardingLoading(true)
 
     try {
-      const result = await authService.register({
+      const result = await authService.registerClinic({
+        nombreClinica: nombreClinica.trim(),
+        telefonoClinica: telefonoClinica.trim(),
+        direccionClinica: direccionClinica.trim(),
         nombreCompleto: nombreAdmin.trim(),
         correo: correoAdmin.trim().toLowerCase(),
         clave: claveAdmin,
-        idClinica: idClinicaCreada,
-        rol: 1,
       })
 
       if (!result.exito) {
@@ -231,7 +225,9 @@ export default function Page() {
       }
 
       await authService.getProfile()
-      router.replace("/")
+      setOnboardingOpen(false)
+      router.replace(getSafeNextPath())
+      router.refresh()
     } catch (err: unknown) {
       if (err instanceof Error) {
         setOnboardingError(err.message || "No se pudo crear la cuenta")
@@ -441,8 +437,8 @@ export default function Page() {
             </DialogTitle>
             <DialogDescription>
               {onboardingStep === 1
-                ? "Primero registra tu clínica para habilitar el entorno SaaS."
-                : "Ahora crea tu cuenta principal. Se registrará automáticamente con rol Administrador."}
+                  ? "Completa los datos de tu clínica para continuar."
+                  : "Ahora crea tu cuenta principal. Se registrará junto con la clínica y se asignará rol Administrador automáticamente."}
             </DialogDescription>
           </DialogHeader>
 
@@ -503,7 +499,7 @@ export default function Page() {
           {onboardingStep === 2 && (
             <form onSubmit={handleCrearCuentaAdminStep} className="space-y-4">
               <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
-                Clínica creada: <strong>{nombreClinica}</strong> (ID {idClinicaCreada})
+                Clínica a registrar: <strong>{nombreClinica}</strong>
               </div>
 
               <div className="space-y-2">

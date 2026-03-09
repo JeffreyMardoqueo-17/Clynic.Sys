@@ -35,7 +35,12 @@ export function DoctorViewDialog({ open, usuario, onOpenChange }: Props) {
 
               <div className="rounded-lg border p-3">
                 <p className="text-muted-foreground mb-1 text-xs uppercase">Rol</p>
-                <p className="font-medium">{rolToLabel(usuario.rol)}</p>
+                <p className="font-medium">{rolToLabel(usuario.idRol, usuario.nombreRol)}</p>
+              </div>
+
+              <div className="rounded-lg border p-3">
+                <p className="text-muted-foreground mb-1 text-xs uppercase">Especialidad</p>
+                <p className="font-medium">{usuario.nombreEspecialidad ?? "N/A"}</p>
               </div>
 
               <div className="rounded-lg border p-3">

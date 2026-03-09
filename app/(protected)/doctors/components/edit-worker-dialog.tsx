@@ -16,7 +16,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SucursalResponseDto } from "@/types/sucursal"
 import { UsuarioRol } from "@/types/usuario"
-import { ROL_OPTIONS } from "./doctors-utils"
+import { ROL_OPTIONS, rolRequiereEspecialidad } from "./doctors-utils"
+
+type EspecialidadOption = {
+  idEspecialidad: number
+  nombreEspecialidad: string
+}
 
 type Props = {
   open: boolean
@@ -32,6 +37,9 @@ type Props = {
   onRolChange: (value: UsuarioRol) => void
   idSucursal: string
   onIdSucursalChange: (value: string) => void
+  idEspecialidad: string
+  onIdEspecialidadChange: (value: string) => void
+  especialidadesDisponibles: EspecialidadOption[]
   sucursales: SucursalResponseDto[]
 }
 
@@ -49,8 +57,13 @@ export function EditWorkerDialog({
   onRolChange,
   idSucursal,
   onIdSucursalChange,
+  idEspecialidad,
+  onIdEspecialidadChange,
+  especialidadesDisponibles,
   sucursales,
 }: Props) {
+  const requiereEspecialidad = rolRequiereEspecialidad(rol)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
@@ -121,6 +134,26 @@ export function EditWorkerDialog({
               ))}
             </select>
           </div>
+
+          {requiereEspecialidad && (
+            <div className="space-y-2">
+              <Label htmlFor="edit-especialidad">Especialidad</Label>
+              <select
+                id="edit-especialidad"
+                value={idEspecialidad}
+                onChange={(e) => onIdEspecialidadChange(e.target.value)}
+                className="border-input bg-background ring-offset-background focus-visible:ring-ring/50 focus-visible:border-ring h-9 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
+                required
+              >
+                <option value="">Selecciona especialidad</option>
+                {especialidadesDisponibles.map((especialidad) => (
+                  <option key={especialidad.idEspecialidad} value={String(especialidad.idEspecialidad)}>
+                    {especialidad.nombreEspecialidad}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <DialogFooter>
             <DialogClose asChild>
