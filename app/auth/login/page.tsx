@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,7 +20,6 @@ import { authService } from "@/services/auth.service"
 
 export default function Page() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const onboardingAutoOpenRef = useRef(false)
   const [correo, setCorreo] = useState("")
   const [clave, setClave] = useState("")
@@ -80,14 +79,14 @@ export default function Page() {
   useEffect(() => {
     if (onboardingAutoOpenRef.current) return
 
-    const onboardingQuery = searchParams.get("onboarding")
+    const onboardingQuery = new URLSearchParams(window.location.search).get("onboarding")
     const shouldAutoOpen = onboardingQuery === "1" || onboardingQuery === "true"
 
     if (shouldAutoOpen) {
       onboardingAutoOpenRef.current = true
       setOnboardingOpen(true)
     }
-  }, [searchParams])
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

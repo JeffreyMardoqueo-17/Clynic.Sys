@@ -10,8 +10,12 @@ import {
   ResetPasswordDto,
   ChangePasswordDto,
   RolDto,
+  CreateRolDto,
   EspecialidadDto,
   EspecialidadSucursalDto,
+  CreateEspecialidadDto,
+  ActualizarEstadoEspecialidadDoctorSucursalesDto,
+  AsignarEspecialidadDoctorSucursalesDto,
 } from "@/types/auth";
 import { getApiErrorMessage, getApiUrl } from "@/services/api.utils";
 
@@ -144,7 +148,7 @@ export const authService = {
 
     return {
       ...raw,
-      rol: raw.rol ?? raw.nombreRol ?? raw.idRol,
+      rol: raw.nombreRol ?? raw.rol ?? raw.idRol,
     };
   },
 
@@ -164,6 +168,23 @@ export const authService = {
     }
 
     return (await response.json()) as RolDto[];
+  },
+
+  async createRol(data: CreateRolDto): Promise<RolDto> {
+    const response = await fetch(`${getApiUrl()}/api/CatalogoPersonal/roles`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo crear el rol"));
+    }
+
+    return (await response.json()) as RolDto;
   },
 
   async getEspecialidadesByClinica(idClinica: number): Promise<EspecialidadDto[]> {
@@ -193,6 +214,90 @@ export const authService = {
 
     return (await response.json()) as EspecialidadSucursalDto[];
   },
+
+    async getDoctorEspecialidadesByClinica(idClinica: number): Promise<EspecialidadDto[]> {
+      const response = await fetch(`${getApiUrl()}/api/EspecialidadesDoctor/clinica/${idClinica}`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(await getApiErrorMessage(response, "No se pudieron obtener las especialidades de doctor por clínica"));
+      }
+
+      return (await response.json()) as EspecialidadDto[];
+    },
+
+    async getDoctorEspecialidadesBySucursal(idClinica: number, idSucursal: number): Promise<EspecialidadSucursalDto[]> {
+      const response = await fetch(`${getApiUrl()}/api/EspecialidadesDoctor/clinica/${idClinica}/sucursal/${idSucursal}`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(await getApiErrorMessage(response, "No se pudieron obtener las especialidades de doctor por sucursal"));
+      }
+
+      return (await response.json()) as EspecialidadSucursalDto[];
+    },
+
+    async createDoctorEspecialidad(data: CreateEspecialidadDto): Promise<EspecialidadDto> {
+      const response = await fetch(`${getApiUrl()}/api/EspecialidadesDoctor`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await getApiErrorMessage(response, "No se pudo crear la especialidad de doctor"));
+      }
+
+      return (await response.json()) as EspecialidadDto;
+    },
+
+    async asignarDoctorEspecialidadASucursales(
+      data: AsignarEspecialidadDoctorSucursalesDto
+    ): Promise<EspecialidadSucursalDto[]> {
+      const response = await fetch(`${getApiUrl()}/api/EspecialidadesDoctor/asignar-sucursales`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(await getApiErrorMessage(response, "No se pudo asignar la especialidad a las sucursales"));
+      }
+
+      return (await response.json()) as EspecialidadSucursalDto[];
+    },
+
+    async actualizarEstadoEspecialidadEnSucursales(
+      payload: ActualizarEstadoEspecialidadDoctorSucursalesDto
+    ): Promise<string> {
+      const response = await fetch(`${getApiUrl()}/api/EspecialidadesDoctor/estado-sucursales`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      });
+
+      const result = (await response.json().catch(() => ({}))) as ApiMessageResponse;
+      if (!response.ok) {
+        throw new Error(result.mensaje || result.message || (await getApiErrorMessage(response, "No se pudo actualizar el estado de especialidades")));
+      }
+
+      return result.mensaje || result.message || "Estado actualizado correctamente";
+    },
 
   async forgotPassword(data: ForgotPasswordDto): Promise<string> {
     const response = await fetch(`${getApiUrl()}/auth/forgot-password`, {

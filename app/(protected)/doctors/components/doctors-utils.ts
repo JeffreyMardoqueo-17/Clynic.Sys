@@ -1,24 +1,31 @@
 import { UsuarioRol } from "@/types/usuario"
 
-export const ROL_OPTIONS: Array<{ value: UsuarioRol; label: string }> = [
-  { value: 2, label: "Doctor" },
-  { value: 4, label: "Nutricionista" },
-  { value: 5, label: "Fisioterapeuta" },
-  { value: 3, label: "Recepcionista" },
-]
+type RoleLike = {
+  id: UsuarioRol
+  nombre: string
+}
 
 export function rolToLabel(idRol: UsuarioRol, nombreRol?: string) {
   if (nombreRol?.trim()) return nombreRol
   if (idRol === 1) return "Admin"
   if (idRol === 2) return "Doctor"
   if (idRol === 3) return "Recepcionista"
-  if (idRol === 4) return "Nutricionista"
-  if (idRol === 5) return "Fisioterapeuta"
   return `Rol #${idRol}`
 }
 
 export function rolRequiereEspecialidad(idRol: UsuarioRol) {
-  return idRol === 2 || idRol === 4 || idRol === 5
+  return idRol === 2
+}
+
+export function rolRequiereEspecialidadPorNombre(nombreRol?: string | null) {
+  return (nombreRol ?? "").trim().toLowerCase() === "doctor"
+}
+
+export function buildRoleOptions(roles: RoleLike[]): Array<{ value: UsuarioRol; label: string }> {
+  return roles.map((rol) => ({
+    value: rol.id,
+    label: rol.nombre,
+  }))
 }
 
 export function formatDate(value: string) {

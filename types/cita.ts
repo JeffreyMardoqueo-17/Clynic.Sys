@@ -88,6 +88,24 @@ export interface RegistrarConsultaMedicaDto {
   fechaConsulta?: string
 }
 
+export interface ReprogramarCitaDto {
+  nuevaFechaHoraInicioPlan: string
+  motivo?: string
+  idDoctor?: number
+}
+
+export interface CitaActividadResponseDto {
+  id: number
+  idCita: number
+  idClinica: number
+  idSucursal: number
+  idUsuario?: number
+  rolUsuario: string
+  accion: string
+  detalle: string
+  fechaCreacion: string
+}
+
 export interface CatalogoSucursalDto {
   id: number
   nombre: string

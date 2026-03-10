@@ -173,7 +173,7 @@ export function useBranchesSchedule() {
       try {
         const perfil = await authService.getProfile()
         setClinicId(perfil.idClinica)
-        setIsAdmin(normalizeRole(perfil.rol) === "Admin")
+        setIsAdmin(normalizeRole(perfil.nombreRol ?? perfil.rol ?? perfil.idRol) === "Admin")
         await loadSucursales(perfil.idClinica)
       } catch (err) {
         setError(err instanceof Error ? err.message : "No se pudo cargar la información")

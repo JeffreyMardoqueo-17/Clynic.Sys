@@ -13,6 +13,9 @@ type PublicAppointmentFormProps = {
 
 export function PublicAppointmentForm({ initialClinicaId }: PublicAppointmentFormProps) {
   const {
+    clinicas,
+    clinicasLoading,
+    clinicasError,
     idClinicaInput,
     setIdClinicaInput,
     catalogo,
@@ -73,26 +76,34 @@ export function PublicAppointmentForm({ initialClinicaId }: PublicAppointmentFor
             Clínica
           </CardTitle>
           <CardDescription>
-            Ingresa el ID de clínica para cargar sucursales y servicios disponibles.
+            Selecciona la clínica para cargar sucursales y servicios disponibles.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 md:flex-row md:items-end">
           <div className="flex-1 space-y-2">
-            <Label htmlFor="idClinica">ID de clínica</Label>
-            <Input
+            <Label htmlFor="idClinica">Clínica</Label>
+            <select
               id="idClinica"
-              type="number"
-              min={1}
+              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
               value={idClinicaInput}
               onChange={(event) => setIdClinicaInput(event.target.value)}
-              placeholder="Ejemplo: 1"
-            />
+              disabled={clinicasLoading}
+            >
+              <option value="">{clinicasLoading ? "Cargando clínicas..." : "Selecciona una clínica"}</option>
+              {clinicas.map((clinica) => (
+                <option key={clinica.id} value={String(clinica.id)}>
+                  {clinica.nombre}
+                </option>
+              ))}
+            </select>
           </div>
           <Button type="button" onClick={() => loadCatalogo(idClinicaInput)} disabled={catalogLoading}>
             {catalogLoading ? "Cargando..." : "Cargar catálogo"}
           </Button>
         </CardContent>
       </Card>
+
+      {clinicasError && <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{clinicasError}</p>}
 
       {catalogError && <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{catalogError}</p>}
   {catalogWarning && <p className="rounded-md bg-amber-500/10 p-3 text-sm text-amber-700">{catalogWarning}</p>}

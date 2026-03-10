@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useMemo } from "react"
-import { BellRing, ClipboardPlus, Stethoscope, UserRound, ArrowRight } from "lucide-react"
+import { BellRing, ClipboardPlus, Stethoscope, UserRound, ArrowRight, FileCheck2, History } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +11,7 @@ import { SucursalResponseDto } from "@/types/sucursal"
 
 type DoctorConsultationWorkbenchProps = {
   idUsuario: number
+  idEspecialidadUsuario: number | null
   citas: CitaResponseDto[]
   sucursales: SucursalResponseDto[]
   citasDoctorEnConsulta: CitaResponseDto[]
@@ -22,6 +23,7 @@ type DoctorConsultationWorkbenchProps = {
 
 export function DoctorConsultationWorkbench({
   idUsuario,
+  idEspecialidadUsuario,
   citas,
   sucursales,
   citasDoctorEnConsulta,
@@ -32,14 +34,39 @@ export function DoctorConsultationWorkbench({
 }: DoctorConsultationWorkbenchProps) {
   const citasPorRecibir = useMemo(
     () => [...citas]
-      .filter((cita) => cita.idDoctor === idUsuario && cita.estado === 5 && !cita.consultaMedica)
+      .filter((cita) => cita.estado === 5 && !cita.consultaMedica)
+      .filter((cita) => !idEspecialidadUsuario || cita.idEspecialidad === idEspecialidadUsuario)
+      .filter((cita) => !cita.idDoctor || cita.idDoctor === idUsuario)
       .sort((a, b) => new Date(a.fechaHoraInicioPlan).getTime() - new Date(b.fechaHoraInicioPlan).getTime()),
-    [citas, idUsuario]
+    [citas, idUsuario, idEspecialidadUsuario]
   )
 
   const sucursalActiva = citaDoctorActiva
     ? sucursales.find((s) => s.id === citaDoctorActiva.idSucursal)?.nombre ?? `Sucursal ${citaDoctorActiva.idSucursal}`
     : ""
+
+  const consultasGuardadasPendientesCierre = useMemo(
+    () => [...citas]
+      .filter((cita) => cita.estado === 6 && !!cita.consultaMedica && cita.idDoctor === idUsuario)
+      .sort((a, b) => {
+        const fechaA = a.consultaMedica?.fechaConsulta ? new Date(a.consultaMedica.fechaConsulta).getTime() : new Date(a.fechaHoraInicioPlan).getTime()
+        const fechaB = b.consultaMedica?.fechaConsulta ? new Date(b.consultaMedica.fechaConsulta).getTime() : new Date(b.fechaHoraInicioPlan).getTime()
+        return fechaB - fechaA
+      }),
+    [citas, idUsuario]
+  )
+
+  const consultasCompletadasRecientes = useMemo(
+    () => [...citas]
+      .filter((cita) => cita.estado === 4 && !!cita.consultaMedica && cita.idDoctor === idUsuario)
+      .sort((a, b) => {
+        const fechaA = a.consultaMedica?.fechaConsulta ? new Date(a.consultaMedica.fechaConsulta).getTime() : new Date(a.fechaHoraInicioPlan).getTime()
+        const fechaB = b.consultaMedica?.fechaConsulta ? new Date(b.consultaMedica.fechaConsulta).getTime() : new Date(b.fechaHoraInicioPlan).getTime()
+        return fechaB - fechaA
+      })
+      .slice(0, 6),
+    [citas, idUsuario]
+  )
 
   return (
     <div className="space-y-5">
@@ -115,6 +142,50 @@ export function DoctorConsultationWorkbench({
                     </Button>
                   </Link>
                 </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><FileCheck2 className="size-5 text-primary" /> Consultas guardadas</CardTitle>
+          <CardDescription>Casos ya documentados por ti que siguen pendientes de cierre en recepción</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {consultasGuardadasPendientesCierre.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No hay consultas guardadas pendientes de cierre.</p>
+          ) : (
+            consultasGuardadasPendientesCierre.map((cita) => (
+              <div key={cita.id} className="rounded-md border border-emerald-200 bg-emerald-50/60 p-3">
+                <p className="text-sm font-semibold">#{cita.id} · {cita.nombrePaciente}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{cita.nombreEspecialidad || "Especialidad N/A"}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Diagnóstico: {cita.consultaMedica?.diagnostico || "Sin diagnóstico"}</p>
+                <Badge className="mt-2">En espera de cierre recepción</Badge>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><History className="size-5 text-primary" /> Atendidas recientemente</CardTitle>
+          <CardDescription>Resumen rápido de tus últimas consultas completadas</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {consultasCompletadasRecientes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aún no hay consultas completadas para mostrar.</p>
+          ) : (
+            consultasCompletadasRecientes.map((cita) => (
+              <div key={cita.id} className="rounded-md border border-sky-200 bg-sky-50/60 p-3">
+                <p className="text-sm font-semibold">#{cita.id} · {cita.nombrePaciente}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{cita.nombreEspecialidad || "Especialidad N/A"}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {new Date(cita.consultaMedica?.fechaConsulta ?? cita.fechaHoraInicioPlan).toLocaleString()}
+                </p>
+                <Badge variant="secondary" className="mt-2">Completada</Badge>
               </div>
             ))
           )}

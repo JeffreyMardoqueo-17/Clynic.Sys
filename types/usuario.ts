@@ -22,7 +22,7 @@ export interface CreateTrabajadorDto {
   nombreCompleto: string
   correo: string
   idClinica: number
-  idSucursal: number
+  idSucursal?: number
   idRol: UsuarioRol
   idEspecialidad?: number
 }

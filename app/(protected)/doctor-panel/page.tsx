@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, BellRing, ClipboardList, Radio, Stethoscope, UserRound } from "lucide-react"
 
@@ -31,6 +31,7 @@ export default function DoctorPanelPage() {
   const [cola, setCola] = useState<CitaResponseDto[]>([])
   const [sucursales, setSucursales] = useState<SucursalResponseDto[]>([])
   const [idDoctor, setIdDoctor] = useState(0)
+  const [idEspecialidadDoctor, setIdEspecialidadDoctor] = useState<number | null>(null)
   const lastQueueSizeRef = useRef(0)
 
   const colaRecepcion = useMemo(
@@ -39,7 +40,9 @@ export default function DoctorPanelPage() {
   )
 
   const enConsulta = useMemo(
-    () => cola.filter((cita) => cita.estado === 6).sort((a, b) => new Date(a.fechaHoraInicioPlan).getTime() - new Date(b.fechaHoraInicioPlan).getTime()),
+    () => cola
+      .filter((cita) => cita.estado === 6 && !cita.consultaMedica)
+      .sort((a, b) => new Date(a.fechaHoraInicioPlan).getTime() - new Date(b.fechaHoraInicioPlan).getTime()),
     [cola]
   )
 
@@ -48,26 +51,30 @@ export default function DoctorPanelPage() {
   const nombreSucursal = (idSucursal: number) =>
     sucursales.find((item) => item.id === idSucursal)?.nombre ?? `Sucursal ${idSucursal}`
 
-  const cargarCola = async (silent = false) => {
+  const cargarCola = useCallback(async (silent = false) => {
     try {
       if (!silent) {
         setError(null)
       }
 
       const data = await citaService.obtenerColaDoctor()
-      setCola(data)
+      const filtrada = idEspecialidadDoctor
+        ? data.filter((cita) => cita.idEspecialidad === idEspecialidadDoctor)
+        : data
 
-      if (silent && data.filter((cita) => cita.estado === 5).length > lastQueueSizeRef.current) {
+      setCola(filtrada)
+
+      if (silent && filtrada.filter((cita) => cita.estado === 5).length > lastQueueSizeRef.current) {
         showToast("Tienes nuevos pacientes en recepción", "info")
       }
 
-      lastQueueSizeRef.current = data.filter((cita) => cita.estado === 5).length
+      lastQueueSizeRef.current = filtrada.filter((cita) => cita.estado === 5).length
     } catch (err) {
       if (!silent) {
         setError(err instanceof Error ? err.message : "No se pudo cargar la cola del doctor")
       }
     }
-  }
+  }, [idEspecialidadDoctor, showToast])
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -76,13 +83,14 @@ export default function DoctorPanelPage() {
 
       try {
         const profile = await authService.getProfile()
-        const role = normalizeRole(profile.rol)
+        const role = normalizeRole(profile.nombreRol ?? profile.rol ?? profile.idRol)
         if (role !== "Doctor") {
           setError("Esta vista es exclusiva para doctores.")
           return
         }
 
         setIdDoctor(profile.id)
+        setIdEspecialidadDoctor(profile.idEspecialidad ?? null)
 
         const sucursalesData = await sucursalService.obtenerPorClinica(profile.idClinica)
         setSucursales(sucursalesData)
@@ -111,7 +119,7 @@ export default function DoctorPanelPage() {
       setConnected(false)
       doctorRealtimeService.disconnect().catch(() => {})
     }
-  }, [])
+  }, [cargarCola, showToast])
 
   useEffect(() => {
     if (loading || error) {
@@ -123,7 +131,7 @@ export default function DoctorPanelPage() {
     }, 10000)
 
     return () => window.clearInterval(interval)
-  }, [loading, error])
+  }, [loading, error, cargarCola])
 
   const tomarSiguiente = async () => {
     if (!siguiente) {
@@ -166,8 +174,15 @@ export default function DoctorPanelPage() {
               <Stethoscope className="size-7" /> Panel Doctor en Vivo
             </h1>
             <p className="text-sm text-white/90">
-              Recepción asigna y tú decides el ritmo de atención. Cuando entra un paciente nuevo, tu panel se actualiza automáticamente.
+              Recibes pacientes por tu especialidad y decides el ritmo de atención. Cuando entra un paciente nuevo, tu panel se actualiza automáticamente.
             </p>
+            <div className="pt-1">
+              <Link href="/appointment">
+                <Button variant="secondary" className="gap-2 bg-white text-sky-700 hover:bg-sky-50">
+                  <ClipboardList className="size-4" /> Historial de citas
+                </Button>
+              </Link>
+            </div>
           </div>
           <div className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
             <p className="text-xs uppercase tracking-wide text-white/80">Estado de conexión</p>

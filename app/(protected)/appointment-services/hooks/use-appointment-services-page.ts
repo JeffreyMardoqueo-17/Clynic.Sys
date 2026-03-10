@@ -32,7 +32,7 @@ export function useAppointmentServicesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [role, setRole] = useState<"Admin" | "Doctor" | "Nutricionista" | "Fisioterapeuta" | "Recepcionista" | "Unknown">("Unknown")
+  const [role, setRole] = useState<"Admin" | "Doctor" | "Recepcionista" | "Unknown">("Unknown")
   const [idClinica, setIdClinica] = useState(0)
 
   const [citas, setCitas] = useState<CitaResponseDto[]>([])
@@ -65,7 +65,7 @@ export function useAppointmentServicesPage() {
 
     try {
       const profile = await authService.getProfile()
-      const normalizedRole = normalizeRole(profile.rol)
+      const normalizedRole = normalizeRole(profile.nombreRol ?? profile.rol ?? profile.idRol)
 
       setRole(normalizedRole)
       setIdClinica(profile.idClinica)

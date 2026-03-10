@@ -1,12 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Image from "next/image"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 type CarouselSlide = {
   title: string
   subtitle: string
   badge: string
+  imageSrc?: string
+  imageAlt?: string
 }
 
 type SystemCarouselProps = {
@@ -55,7 +58,20 @@ export function SystemCarousel({ slides }: SystemCarouselProps) {
                 <p className="landing-image-badge">{slide.badge}</p>
                 <h3>{slide.title}</h3>
                 <p>{slide.subtitle}</p>
-                <p className="landing-image-placeholder">Espacio para screenshot real del sistema</p>
+                {slide.imageSrc ? (
+                  <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <Image
+                      src={slide.imageSrc}
+                      alt={slide.imageAlt ?? slide.title}
+                      width={1280}
+                      height={720}
+                      className="h-auto w-full object-cover"
+                      priority={false}
+                    />
+                  </div>
+                ) : (
+                  <p className="landing-image-placeholder">Espacio para screenshot real del sistema</p>
+                )}
               </div>
             </div>
           </article>

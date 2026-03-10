@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { CalendarDays, CalendarPlus, List, ListFilter, History } from "lucide-react"
+import { CalendarDays, CalendarPlus, List, ListFilter, History, Sparkles, UserRoundCheck, Stethoscope, CircleCheckBig } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -156,10 +156,8 @@ export function AppointmentManagement() {
   }, [vistaActiva, agendarModalOpen, vm.canCreateInternal, router, pathname, currentQuery])
 
   const citasActuales = useMemo(() => {
-    const ahora = Date.now()
-
     return vm.citas
-      .filter((cita) => new Date(cita.fechaHoraInicioPlan).getTime() >= ahora && cita.estado !== 3)
+      .filter((cita) => cita.estado !== 3 && cita.estado !== 4)
       .sort((a, b) => new Date(a.fechaHoraInicioPlan).getTime() - new Date(b.fechaHoraInicioPlan).getTime())
   }, [vm.citas])
 
@@ -176,6 +174,15 @@ export function AppointmentManagement() {
     () => [...vm.citasTodas].sort((a, b) => new Date(a.fechaHoraInicioPlan).getTime() - new Date(b.fechaHoraInicioPlan).getTime()),
     [vm.citasTodas]
   )
+
+  const resumenFlujo = useMemo(() => {
+    const pendientes = vm.citas.filter((c) => c.estado === 1 || c.estado === 2).length
+    const presentes = vm.citas.filter((c) => c.estado === 5).length
+    const enConsulta = vm.citas.filter((c) => c.estado === 6).length
+    const completadasHoy = vm.citas.filter((c) => c.estado === 4).length
+
+    return { pendientes, presentes, enConsulta, completadasHoy }
+  }, [vm.citas])
 
   const citasPorEspecialidadHoy = useMemo(() => {
     const agrupadas = new Map<string, number>()
@@ -218,7 +225,7 @@ export function AppointmentManagement() {
             Vista exclusiva para doctor: revisa pacientes transferidos por recepción, abre el caso y registra la consulta.
           </p>
           <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
-            Flujo recomendado: 1) Recepción marca llegada y asigna doctor, 2) recepción pasa a consulta, 3) doctor abre caso y finaliza consulta.
+            Flujo recomendado: 1) Recepción marca llegada (Presente), 2) doctor toma paciente por orden y especialidad, 3) doctor registra consulta y recepción coordina cierre/seguimiento.
           </div>
         </header>
 
@@ -226,6 +233,7 @@ export function AppointmentManagement() {
 
         <DoctorConsultationWorkbench
           idUsuario={vm.idUsuario}
+          idEspecialidadUsuario={vm.idEspecialidadUsuario}
           citas={citasActuales}
           sucursales={vm.sucursales}
           citasDoctorEnConsulta={vm.citasDoctorEnConsulta}
@@ -241,10 +249,21 @@ export function AppointmentManagement() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="flex items-center gap-2 text-3xl font-bold"><CalendarDays className="size-7" /> Citas</h1>
-        <p className="text-sm text-muted-foreground">
-          Citas agendadas, gestión de agenda y asignación de doctores por recepción/admin.
-        </p>
+        <div className="relative overflow-hidden rounded-2xl border bg-linear-to-r from-cyan-600 via-sky-600 to-indigo-600 p-5 text-white shadow-sm">
+          <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-12 left-14 h-32 w-32 rounded-full bg-black/10 blur-2xl" />
+          <div className="relative z-10 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="flex items-center gap-2 text-3xl font-bold"><CalendarDays className="size-7" /> Citas</h1>
+              <p className="text-sm text-white/90">
+                Flujo del día: recepción marca llegada, doctor toma por orden y especialidad, consulta se refleja en tiempo real.
+              </p>
+            </div>
+            <Badge className="w-fit border-white/30 bg-white/15 text-white hover:bg-white/20">
+              <Sparkles className="mr-1 size-3.5" /> Flujo en vivo
+            </Badge>
+          </div>
+        </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <Badge variant="outline">Pendiente</Badge>
@@ -255,6 +274,48 @@ export function AppointmentManagement() {
           <Badge>Completada</Badge>
         </div>
       </header>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="border-l-4 border-l-amber-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="inline-flex items-center gap-2"><History className="size-4" /> Pendientes</span>
+              <Badge variant="outline">{resumenFlujo.pendientes}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent><p className="text-xs text-muted-foreground">Aún no han llegado o están confirmadas</p></CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-cyan-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="inline-flex items-center gap-2"><UserRoundCheck className="size-4" /> En recepción</span>
+              <Badge variant="secondary">{resumenFlujo.presentes}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent><p className="text-xs text-muted-foreground">Listas para ser tomadas por el doctor</p></CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="inline-flex items-center gap-2"><Stethoscope className="size-4" /> En consulta</span>
+              <Badge>{resumenFlujo.enConsulta}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent><p className="text-xs text-muted-foreground">Atención clínica en progreso</p></CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-emerald-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center justify-between text-sm">
+              <span className="inline-flex items-center gap-2"><CircleCheckBig className="size-4" /> Completadas hoy</span>
+              <Badge variant="secondary">{resumenFlujo.completadasHoy}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent><p className="text-xs text-muted-foreground">Consultas cerradas durante la jornada</p></CardContent>
+        </Card>
+      </div>
 
       {vm.error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{vm.error}</div>}
 
@@ -473,6 +534,55 @@ export function AppointmentManagement() {
                             </option>
                           ))}
                         </select>
+
+                        <p className="text-xs text-muted-foreground">
+                          Si el paciente no existe en la lista, regístralo aquí y quedará seleccionado automáticamente.
+                        </p>
+
+                        <div className="rounded-md border bg-muted/30 p-3">
+                          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Registrar nuevo paciente</p>
+                          <div className="grid gap-2 md:grid-cols-2">
+                            <input
+                              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                              placeholder="Nombres *"
+                              value={vm.formNuevoPaciente.nombres}
+                              onChange={(e) => vm.setFormNuevoPaciente((prev) => ({ ...prev, nombres: e.target.value }))}
+                            />
+                            <input
+                              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                              placeholder="Apellidos *"
+                              value={vm.formNuevoPaciente.apellidos}
+                              onChange={(e) => vm.setFormNuevoPaciente((prev) => ({ ...prev, apellidos: e.target.value }))}
+                            />
+                            <input
+                              type="email"
+                              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                              placeholder="Correo *"
+                              value={vm.formNuevoPaciente.correo}
+                              onChange={(e) => vm.setFormNuevoPaciente((prev) => ({ ...prev, correo: e.target.value }))}
+                            />
+                            <input
+                              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                              placeholder="Teléfono"
+                              value={vm.formNuevoPaciente.telefono ?? ""}
+                              onChange={(e) => vm.setFormNuevoPaciente((prev) => ({ ...prev, telefono: e.target.value }))}
+                            />
+                            <input
+                              type="date"
+                              className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                              value={vm.formNuevoPaciente.fechaNacimiento ?? ""}
+                              onChange={(e) => vm.setFormNuevoPaciente((prev) => ({ ...prev, fechaNacimiento: e.target.value }))}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={vm.registrarPacienteRapido}
+                              disabled={vm.crearPacienteLoading}
+                            >
+                              {vm.crearPacienteLoading ? "Registrando..." : "Registrar paciente"}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -601,7 +711,6 @@ export function AppointmentManagement() {
           role={vm.role}
           citas={citasActuales}
           sucursales={vm.sucursales}
-          doctores={vm.doctores}
           estadoLoadingId={vm.estadoLoadingId}
           consultaLoading={vm.consultaLoading}
           canCreateInternal={vm.canCreateInternal}
@@ -669,29 +778,14 @@ export function AppointmentManagement() {
                             </Button>
                           )}
 
-                          {(["admin", "recepcionista"].includes(String(vm.role ?? "").toLowerCase()) && cita.estado === 5) && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => vm.pasarAConsulta(cita.id)}
-                              disabled={vm.estadoLoadingId === cita.id || !cita.idDoctor}
-                            >
-                              {vm.estadoLoadingId === cita.id
-                                ? "Actualizando..."
-                                : cita.idDoctor
-                                  ? "Pasar a doctor"
-                                  : "Asigna doctor en Flujo"}
-                            </Button>
-                          )}
-
-                          {(["admin", "doctor", "nutricionista", "fisioterapeuta"].includes(String(vm.role ?? "").toLowerCase()) && (cita.estado === 2 || cita.estado === 5)) && (
+                          {(["admin", "doctor"].includes(String(vm.role ?? "").toLowerCase()) && cita.estado === 5) && (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => vm.pasarAConsulta(cita.id)}
                               disabled={vm.estadoLoadingId === cita.id}
                             >
-                              {vm.estadoLoadingId === cita.id ? "Actualizando..." : "Iniciar consulta"}
+                              {vm.estadoLoadingId === cita.id ? "Actualizando..." : "Tomar turno"}
                             </Button>
                           )}
                         </div>

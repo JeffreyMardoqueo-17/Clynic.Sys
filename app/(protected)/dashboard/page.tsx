@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Building2, CalendarClock, CalendarDays, CalendarX2, Stethoscope, Users } from "lucide-react"
 
 import { ChartAreaCitas } from "@/components/dashboard/chart-area-citas"
@@ -53,6 +54,7 @@ function getRangeForPeriodo(periodo: DashboardPeriodo, now = new Date()) {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [perfilReady, setPerfilReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -72,8 +74,14 @@ export default function DashboardPage() {
     const loadProfile = async () => {
       try {
         const profile = await authService.getProfile()
-        const normalizedRole = normalizeRole(profile.rol)
+        const normalizedRole = normalizeRole(profile.nombreRol ?? profile.rol ?? profile.idRol)
         setRole(normalizedRole)
+
+        if (normalizedRole !== "Admin") {
+          const target = normalizedRole === "Doctor" ? "/doctor-panel" : "/reception"
+          router.replace(target)
+          return
+        }
 
         if (normalizedRole === "Admin") {
           const sucursalesData = await sucursalService.obtenerPorClinica(profile.idClinica)
@@ -87,7 +95,7 @@ export default function DashboardPage() {
     }
 
     loadProfile()
-  }, [])
+  }, [router])
 
   useEffect(() => {
     if (!perfilReady) {
@@ -180,7 +188,7 @@ export default function DashboardPage() {
               onClick={() => setPeriodo(item.value)}
               className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
                 periodo === item.value
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-primary text-white border-transparent"
                   : "bg-background hover:bg-muted"
               }`}
             >

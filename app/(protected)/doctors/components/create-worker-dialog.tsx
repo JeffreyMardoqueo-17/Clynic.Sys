@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SucursalResponseDto } from "@/types/sucursal"
 import { UsuarioRol } from "@/types/usuario"
-import { ROL_OPTIONS, rolRequiereEspecialidad } from "./doctors-utils"
+import { rolRequiereEspecialidadPorNombre } from "./doctors-utils"
 
 type EspecialidadOption = {
   idEspecialidad: number
@@ -35,6 +35,8 @@ type Props = {
   onCorreoChange: (value: string) => void
   rol: UsuarioRol
   onRolChange: (value: UsuarioRol) => void
+  roleOptions: Array<{ value: UsuarioRol; label: string }>
+  selectedRoleLabel?: string
   idSucursalCrear: string
   onIdSucursalCrearChange: (value: string) => void
   idEspecialidadCrear: string
@@ -55,6 +57,8 @@ export function CreateWorkerDialog({
   onCorreoChange,
   rol,
   onRolChange,
+  roleOptions,
+  selectedRoleLabel,
   idSucursalCrear,
   onIdSucursalCrearChange,
   idEspecialidadCrear,
@@ -63,7 +67,7 @@ export function CreateWorkerDialog({
   sucursales,
   onSubmit,
 }: Props) {
-  const requiereEspecialidad = rolRequiereEspecialidad(rol)
+  const requiereEspecialidad = rolRequiereEspecialidadPorNombre(selectedRoleLabel)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,7 +122,7 @@ export function CreateWorkerDialog({
               className="border-input bg-background ring-offset-background focus-visible:ring-ring/50 focus-visible:border-ring h-9 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
               required
             >
-              {ROL_OPTIONS.map((option) => (
+              {roleOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

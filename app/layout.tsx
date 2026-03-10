@@ -4,6 +4,7 @@ import "./globals.css"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { FloatingToaster } from "@/components/components/floating-toaster"
 import { ToastProvider } from "@/hooks/use-toast"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,14 +27,21 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body>
-        <TooltipProvider>
-          <ToastProvider>
-            {children}
-            <FloatingToaster />
-          </ToastProvider>
-        </TooltipProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>
+            <ToastProvider>
+              {children}
+              <FloatingToaster />
+            </ToastProvider>
+          </TooltipProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

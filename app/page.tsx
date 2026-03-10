@@ -50,6 +50,20 @@ const productPillars = [
   "Gestion por roles del equipo",
 ]
 
+const mvpNow = [
+  "Recepcion con control de cancelaciones por ventana de tiempo",
+  "Agenda interna y portal publico de citas sincronizados",
+  "Gestion de especialidades por sucursal con activacion/desactivacion",
+  "Bitacora operativa para auditoria de cambios en citas",
+]
+
+const roadmapNext = [
+  "Recordatorios automaticos por WhatsApp y correo",
+  "Pagos, anticipos y politicas de no-show",
+  "Reportes ejecutivos de conversion y ocupacion por sucursal",
+  "Portal paciente para confirmar, reprogramar y cancelar por autoservicio",
+]
+
 const services = [
   {
     icon: <CalendarCheck2 className="size-5" />,
@@ -106,24 +120,53 @@ const impactItems = [
 
 const systemSlides = [
   {
-    badge: "Vista Dashboard",
-    title: "Panel de operacion diaria",
-    subtitle: "Resumen de actividad, citas y estado general para decisiones rapidas.",
+    badge: "Dashboard Administracion",
+    title: "Panel administrativo completo",
+    subtitle: "Vista ejecutiva con metricas clave, estado de clinica, sucursales y actividad del equipo en tiempo real.",
+    imageSrc: "/system/Dashboard_Adminstracion.png",
+    imageAlt: "Captura del dashboard de administracion",
   },
   {
-    badge: "Vista Citas",
-    title: "Agenda con flujo completo",
-    subtitle: "Pendiente, presente, en consulta y completada para coordinar recepcion y doctor.",
+    badge: "Dashboard Recepcion",
+    title: "Centro de operaciones de recepcion",
+    subtitle: "La recepcionista gestiona citas del dia, estados de pacientes y cola activa desde un solo panel.",
+    imageSrc: "/system/Dashboard_resepcion.png",
+    imageAlt: "Captura del dashboard de recepcion",
   },
   {
-    badge: "Vista Expediente",
-    title: "Paciente + historial + consulta",
-    subtitle: "Toda la informacion clinica en una misma linea de atencion.",
+    badge: "Vista Calendario",
+    title: "Calendario de citas por dia",
+    subtitle: "Vista temporal de todas las citas agendadas con colores por estado: pendiente, presente, en consulta y completada.",
+    imageSrc: "/system/Calendario.png",
+    imageAlt: "Captura del calendario de citas",
   },
   {
-    badge: "Vista Doctores",
-    title: "Cola medica en vivo",
-    subtitle: "Notificaciones en tiempo real al doctor cuando cambia su cola de pacientes.",
+    badge: "Administracion de Citas",
+    title: "Gestion completa de appointments",
+    subtitle: "Crea, edita, cancela y filtra citas internas con control de horarios disponibles y validacion de traslapes.",
+    imageSrc: "/system/Vista_appointment.png",
+    imageAlt: "Captura de la vista de appointments",
+  },
+  {
+    badge: "Lista de Trabajadores",
+    title: "Control de personal y roles",
+    subtitle: "Adminsitracion del equipo clinico: doctores, recepcionistas y roles con permisos diferenciados por sucursal.",
+    imageSrc: "/system/Vista_Lista_Trabajadores.png",
+    imageAlt: "Captura de la lista de trabajadores",
+  },
+  {
+    badge: "Gestion de Sucursales",
+    title: "Operacion multi-sucursal",
+    subtitle: "Configura cada sede con sus horarios, especialidades activas y personal asignado desde un panel unificado.",
+    imageSrc: "/system/Vistas_Sucursales.png",
+    imageAlt: "Captura de la vista de sucursales",
+  },
+  {
+    badge: "Panel Doctor",
+    title: "Vista medica en tiempo real",
+    subtitle: "El doctor visualiza su cola de pacientes, historial previo y registra diagnostico, receta y notas de consulta.",
+    imageSrc: "/system/Panel_doctor.png",
+    imageAlt: "Captura del panel del doctor",
   },
 ]
 
@@ -302,8 +345,8 @@ export default function LandingPage() {
       <section id="producto" className="landing-section relative z-10 mx-auto w-full max-w-6xl px-6 pb-20 md:px-10">
         <SectionHeading
           eyebrow="Producto desarrollado"
-          title="Lo que ya construimos en Clynic"
-          description="Un sistema diseñado para vender mas, atender mejor y operar con orden desde la primera semana de uso."
+          title="MVP hoy + roadmap de crecimiento"
+          description="El MVP ya controla el ciclo de citas y operacion clinica; ademas ya tenemos definido lo que sigue para escalar ventas y experiencia paciente."
         />
 
         <div className="mt-8 flex flex-wrap gap-2">
@@ -335,6 +378,34 @@ export default function LandingPage() {
             <BarChart3 className="size-5 text-sky-700" />
             <p className="text-2xl font-black text-slate-900">Mas rentabilidad</p>
             <p className="text-sm text-slate-600">Mejor uso del tiempo y agenda del equipo</p>
+          </article>
+        </div>
+
+        <div className="mt-8 grid gap-5 md:grid-cols-2">
+          <article className="landing-panel p-5 sm:p-6">
+            <p className="section-eyebrow">MVP disponible</p>
+            <h3 className={`${headingFont.className} mt-2 text-2xl font-bold text-slate-900`}>Lo que ya puedes vender hoy</h3>
+            <div className="mt-4 space-y-2">
+              {mvpNow.map((item) => (
+                <p key={item} className="flex items-start gap-2 text-sm text-slate-700">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                  <span>{item}</span>
+                </p>
+              ))}
+            </div>
+          </article>
+
+          <article className="landing-panel p-5 sm:p-6">
+            <p className="section-eyebrow">Proximamente</p>
+            <h3 className={`${headingFont.className} mt-2 text-2xl font-bold text-slate-900`}>Lo que ofrecemos mas adelante</h3>
+            <div className="mt-4 space-y-2">
+              {roadmapNext.map((item) => (
+                <p key={item} className="flex items-start gap-2 text-sm text-slate-700">
+                  <Sparkles className="mt-0.5 size-4 shrink-0 text-sky-600" />
+                  <span>{item}</span>
+                </p>
+              ))}
+            </div>
           </article>
         </div>
       </section>
@@ -406,9 +477,9 @@ export default function LandingPage() {
 
       <section id="galeria" className="landing-section relative z-10 mx-auto w-full max-w-6xl px-6 pb-20 md:px-10">
         <SectionHeading
-          eyebrow="Galeria del sistema"
-          title="Pantallas clave para demos comerciales"
-          description="Reemplaza estos bloques por capturas reales para mostrar valor visual inmediato en reuniones o campañas."
+          eyebrow="Capturas reales"
+          title="El sistema que ya construimos"
+          description="7 vistas del sistema en produccion: dashboards por rol, calendario de citas, gestion de appointments, control de trabajadores, sucursales y panel del doctor."
         />
 
         <div className="mt-8">

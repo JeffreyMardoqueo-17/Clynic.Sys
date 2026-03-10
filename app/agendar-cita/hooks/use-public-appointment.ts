@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { citaService } from "@/services/cita.service"
+import { clinicaService } from "@/services/clinica.service"
 import { useToast } from "@/hooks/use-toast"
 import { CatalogoCitaPublicaDto, CreateCitaPublicaDto, HorariosDisponiblesCitaDto } from "@/types/cita"
+import { ClinicaResponseDto } from "@/types/clinica"
 
 function toIsoDateTime(localDateTime: string) {
   if (!localDateTime) {
@@ -43,6 +45,9 @@ export function usePublicAppointment(initialClinicaId?: number) {
   const initialIdClinica = parsePositiveInt(initialClinicaId)
   const [idClinica, setIdClinica] = useState<number>(initialIdClinica)
   const [idClinicaInput, setIdClinicaInput] = useState<string>(initialIdClinica > 0 ? String(initialIdClinica) : "")
+  const [clinicas, setClinicas] = useState<ClinicaResponseDto[]>([])
+  const [clinicasLoading, setClinicasLoading] = useState(false)
+  const [clinicasError, setClinicasError] = useState<string | null>(null)
   const [catalogo, setCatalogo] = useState<CatalogoCitaPublicaDto | null>(null)
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [catalogError, setCatalogError] = useState<string | null>(null)
@@ -151,7 +156,25 @@ export function usePublicAppointment(initialClinicaId?: number) {
     }
   }
 
+  const loadClinicasPublicas = async () => {
+    setClinicasLoading(true)
+    setClinicasError(null)
+
+    try {
+      const result = await clinicaService.obtenerPublicas()
+      setClinicas(result)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudieron cargar las clínicas"
+      setClinicasError(message)
+      setClinicas([])
+    } finally {
+      setClinicasLoading(false)
+    }
+  }
+
   useEffect(() => {
+    loadClinicasPublicas()
+
     if (initialIdClinica > 0) {
       loadCatalogo(initialIdClinica)
     }
@@ -287,6 +310,9 @@ export function usePublicAppointment(initialClinicaId?: number) {
   }
 
   return {
+    clinicas,
+    clinicasLoading,
+    clinicasError,
     idClinica,
     setIdClinica,
     idClinicaInput,

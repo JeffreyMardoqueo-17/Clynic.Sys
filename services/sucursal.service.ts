@@ -25,6 +25,20 @@ function mapSucursal(raw: RawSucursal): SucursalResponseDto {
 }
 
 export const sucursalService = {
+  async obtenerPublicasPorClinica(idClinica: number): Promise<SucursalResponseDto[]> {
+    const response = await fetch(`${getApiUrl()}/Sucursales/publicas/clinica/${idClinica}`, {
+      method: "GET",
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "Error al obtener sucursales públicas"))
+    }
+
+    const result = (await response.json()) as RawSucursal[]
+    return result.map(mapSucursal)
+  },
+
   async obtenerTodas(): Promise<SucursalResponseDto[]> {
     const response = await fetch(`${getApiUrl()}/Sucursales`, {
       method: "GET",

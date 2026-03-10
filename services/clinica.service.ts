@@ -28,6 +28,20 @@ function mapClinica(raw: RawClinica): ClinicaResponseDto {
 }
 
 export const clinicaService = {
+  async obtenerPublicas(): Promise<ClinicaResponseDto[]> {
+    const response = await fetch(`${getApiUrl()}/Clinicas/publicas`, {
+      method: "GET",
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "Error al obtener clínicas públicas"))
+    }
+
+    const result = (await response.json()) as RawClinica[]
+    return result.map(mapClinica)
+  },
+
   async obtenerTodas(): Promise<ClinicaResponseDto[]> {
     const response = await fetch(`${getApiUrl()}/Clinicas`, {
       method: "GET",
