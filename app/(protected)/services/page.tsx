@@ -27,8 +27,10 @@ import {
 } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
 import { authService } from "@/services/auth.service"
+import { citaService } from "@/services/cita.service"
 import { servicioService } from "@/services/servicio.service"
 import { CreateServicioDto, ServicioResponseDto } from "@/types/servicio"
+import { CatalogoEspecialidadSucursalDto } from "@/types/cita"
 
 function money(value: number) {
   return new Intl.NumberFormat("es-GT", {
@@ -53,8 +55,10 @@ export default function ServicesPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
   const [nombreServicio, setNombreServicio] = useState("")
+  const [idEspecialidad, setIdEspecialidad] = useState<number>(0)
   const [duracionMin, setDuracionMin] = useState<number>(30)
   const [precioBase, setPrecioBase] = useState<number>(0)
+  const [especialidades, setEspecialidades] = useState<Array<{ idEspecialidad: number; nombreEspecialidad: string }>>([])
 
   const [selectedServicio, setSelectedServicio] = useState<ServicioResponseDto | null>(null)
   const [viewOpen, setViewOpen] = useState(false)
@@ -62,6 +66,7 @@ export default function ServicesPage() {
   const [actionLoading, setActionLoading] = useState(false)
 
   const [editNombreServicio, setEditNombreServicio] = useState("")
+  const [editIdEspecialidad, setEditIdEspecialidad] = useState<number>(0)
   const [editDuracionMin, setEditDuracionMin] = useState<number>(30)
   const [editPrecioBase, setEditPrecioBase] = useState<number>(0)
 
@@ -86,6 +91,21 @@ export default function ServicesPage() {
         setClinicId(perfil.idClinica)
 
         if (!admin) return
+
+        const catalogo = await citaService.obtenerCatalogoPublico(perfil.idClinica)
+        const especialidadesMap = new Map<number, string>()
+        for (const item of catalogo.especialidadesPorSucursal as CatalogoEspecialidadSucursalDto[]) {
+          if (!especialidadesMap.has(item.idEspecialidad)) {
+            especialidadesMap.set(item.idEspecialidad, item.nombreEspecialidad)
+          }
+        }
+
+        const especialidadesList = Array.from(especialidadesMap.entries())
+          .map(([idEsp, nombreEsp]) => ({ idEspecialidad: idEsp, nombreEspecialidad: nombreEsp }))
+          .sort((a, b) => a.nombreEspecialidad.localeCompare(b.nombreEspecialidad))
+
+        setEspecialidades(especialidadesList)
+        setIdEspecialidad(especialidadesList[0]?.idEspecialidad ?? 0)
 
         await loadData(perfil.idClinica, "", false)
       } catch (err) {
@@ -126,6 +146,7 @@ export default function ServicesPage() {
     try {
       const payload: CreateServicioDto = {
         idClinica: clinicId,
+        idEspecialidad,
         nombreServicio: nombreServicio.trim(),
         duracionMin,
         precioBase,
@@ -134,6 +155,7 @@ export default function ServicesPage() {
       await servicioService.crear(payload)
       setCreateOpen(false)
       setNombreServicio("")
+      setIdEspecialidad(especialidades[0]?.idEspecialidad ?? 0)
       setDuracionMin(30)
       setPrecioBase(0)
 
@@ -156,6 +178,7 @@ export default function ServicesPage() {
   const openEdit = (servicio: ServicioResponseDto) => {
     setSelectedServicio(servicio)
     setEditNombreServicio(servicio.nombreServicio)
+    setEditIdEspecialidad(servicio.idEspecialidad)
     setEditDuracionMin(servicio.duracionMin)
     setEditPrecioBase(servicio.precioBase)
     setEditOpen(true)
@@ -170,6 +193,7 @@ export default function ServicesPage() {
 
     try {
       await servicioService.actualizar(selectedServicio.id, {
+        idEspecialidad: editIdEspecialidad,
         nombreServicio: editNombreServicio.trim(),
         duracionMin: editDuracionMin,
         precioBase: editPrecioBase,
@@ -274,6 +298,24 @@ export default function ServicesPage() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="especialidad-servicio">Especialidad</Label>
+                <select
+                  id="especialidad-servicio"
+                  className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                  value={idEspecialidad}
+                  onChange={(e) => setIdEspecialidad(Number(e.target.value))}
+                  required
+                >
+                  <option value={0}>Selecciona especialidad</option>
+                  {especialidades.map((especialidad) => (
+                    <option key={especialidad.idEspecialidad} value={especialidad.idEspecialidad}>
+                      {especialidad.nombreEspecialidad}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="duracion-servicio">Duración (min)</Label>
@@ -305,7 +347,7 @@ export default function ServicesPage() {
                 <DialogClose asChild>
                   <Button type="button" variant="outline">Cancelar</Button>
                 </DialogClose>
-                <Button type="submit" disabled={createLoading || !nombreServicio.trim() || duracionMin <= 0 || precioBase < 0}>
+                <Button type="submit" disabled={createLoading || !nombreServicio.trim() || idEspecialidad <= 0 || duracionMin <= 0 || precioBase < 0}>
                   {createLoading ? "Guardando..." : "Crear servicio"}
                 </Button>
               </DialogFooter>
@@ -349,6 +391,7 @@ export default function ServicesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Servicio</TableHead>
+                  <TableHead>Especialidad</TableHead>
                   <TableHead>Duración</TableHead>
                   <TableHead>Costo por cita</TableHead>
                   <TableHead>Estado</TableHead>
@@ -358,7 +401,7 @@ export default function ServicesPage() {
               <TableBody>
                 {serviciosFiltrados.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-muted-foreground h-24 text-center">
+                    <TableCell colSpan={6} className="text-muted-foreground h-24 text-center">
                       {showInactive ? "No hay servicios inactivos." : "No hay servicios activos."}
                     </TableCell>
                   </TableRow>
@@ -366,6 +409,7 @@ export default function ServicesPage() {
                   serviciosFiltrados.map((servicio) => (
                     <TableRow key={servicio.id}>
                       <TableCell className="font-medium">{servicio.nombreServicio}</TableCell>
+                      <TableCell>{servicio.nombreEspecialidad || `#${servicio.idEspecialidad}`}</TableCell>
                       <TableCell>{servicio.duracionMin} min</TableCell>
                       <TableCell>{money(servicio.precioBase)}</TableCell>
                       <TableCell>
@@ -447,6 +491,7 @@ export default function ServicesPage() {
           {selectedServicio && (
             <div className="space-y-2 text-sm">
               <p><span className="font-medium">Nombre:</span> {selectedServicio.nombreServicio}</p>
+              <p><span className="font-medium">Especialidad:</span> {selectedServicio.nombreEspecialidad || `#${selectedServicio.idEspecialidad}`}</p>
               <p><span className="font-medium">Duración:</span> {selectedServicio.duracionMin} min</p>
               <p><span className="font-medium">Costo por cita:</span> {money(selectedServicio.precioBase)}</p>
               <p><span className="font-medium">Estado:</span> {selectedServicio.activo ? "Activo" : "Inactivo"}</p>
@@ -477,6 +522,24 @@ export default function ServicesPage() {
                 onChange={(e) => setEditNombreServicio(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-especialidad-servicio">Especialidad</Label>
+              <select
+                id="edit-especialidad-servicio"
+                className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm"
+                value={editIdEspecialidad}
+                onChange={(e) => setEditIdEspecialidad(Number(e.target.value))}
+                required
+              >
+                <option value={0}>Selecciona especialidad</option>
+                {especialidades.map((especialidad) => (
+                  <option key={especialidad.idEspecialidad} value={especialidad.idEspecialidad}>
+                    {especialidad.nombreEspecialidad}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -510,7 +573,7 @@ export default function ServicesPage() {
               <DialogClose asChild>
                 <Button variant="outline" type="button">Cancelar</Button>
               </DialogClose>
-              <Button type="submit" disabled={actionLoading || !editNombreServicio.trim() || editDuracionMin <= 0 || editPrecioBase < 0}>
+              <Button type="submit" disabled={actionLoading || !editNombreServicio.trim() || editIdEspecialidad <= 0 || editDuracionMin <= 0 || editPrecioBase < 0}>
                 {actionLoading ? "Guardando..." : "Guardar cambios"}
               </Button>
             </DialogFooter>

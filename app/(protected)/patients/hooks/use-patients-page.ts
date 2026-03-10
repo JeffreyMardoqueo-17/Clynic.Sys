@@ -14,7 +14,7 @@ export function usePatientsPage() {
   const [error, setError] = useState<string | null>(null)
   const [busqueda, setBusqueda] = useState("")
   const [idClinica, setIdClinica] = useState(0)
-  const [role, setRole] = useState<"Admin" | "Doctor" | "Nutricionista" | "Fisioterapeuta" | "Recepcionista" | "Unknown">("Unknown")
+  const [role, setRole] = useState<"Admin" | "Doctor" | "Recepcionista" | "Unknown">("Unknown")
 
   const [pacientes, setPacientes] = useState<PacienteResponseDto[]>([])
   const [selectedPaciente, setSelectedPaciente] = useState<PacienteResponseDto | null>(null)
@@ -56,7 +56,7 @@ export function usePatientsPage() {
     try {
       const profile = await authService.getProfile()
       setIdClinica(profile.idClinica)
-      setRole(normalizeRole(profile.rol))
+      setRole(normalizeRole(profile.nombreRol ?? profile.rol ?? profile.idRol))
 
       const data = await pacienteService.obtenerPorClinica(profile.idClinica)
       setPacientes(data)

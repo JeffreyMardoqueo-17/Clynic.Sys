@@ -4,22 +4,24 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { useToast } from "@/hooks/use-toast"
 import { authService } from "@/services/auth.service"
-import { citaService } from "@/services/cita.service"
 import { sucursalService } from "@/services/sucursal.service"
 import { usuarioService } from "@/services/usuario.service"
-import { CatalogoEspecialidadSucursalDto } from "@/types/cita"
+import { EspecialidadDto, EspecialidadSucursalDto, RolDto } from "@/types/auth"
 import { SucursalResponseDto } from "@/types/sucursal"
 import { UsuarioRol, UsuarioResponseDto } from "@/types/usuario"
-import { rolRequiereEspecialidad } from "../components/doctors-utils"
+import { buildRoleOptions, rolRequiereEspecialidadPorNombre } from "../components/doctors-utils"
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 export function useDoctorsPage() {
   const { showToast } = useToast()
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
   const [clinicId, setClinicId] = useState<number | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
 
   const [workers, setWorkers] = useState<UsuarioResponseDto[]>([])
   const [sucursales, setSucursales] = useState<SucursalResponseDto[]>([])
+  const [rolesDisponibles, setRolesDisponibles] = useState<RolDto[]>([])
+  const [editRolesDisponibles, setEditRolesDisponibles] = useState<RolDto[]>([])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -29,7 +31,7 @@ export function useDoctorsPage() {
 
   const [nombreCompleto, setNombreCompleto] = useState("")
   const [correo, setCorreo] = useState("")
-  const [rol, setRol] = useState<UsuarioRol>(2)
+  const [rol, setRol] = useState<UsuarioRol>(0)
   const [idSucursalCrear, setIdSucursalCrear] = useState<string>("")
   const [idEspecialidadCrear, setIdEspecialidadCrear] = useState<string>("")
 
@@ -45,11 +47,12 @@ export function useDoctorsPage() {
 
   const [editNombreCompleto, setEditNombreCompleto] = useState("")
   const [editCorreo, setEditCorreo] = useState("")
-  const [editRol, setEditRol] = useState<UsuarioRol>(2)
+  const [editRol, setEditRol] = useState<UsuarioRol>(0)
   const [editIdSucursal, setEditIdSucursal] = useState<string>("")
   const [editIdEspecialidad, setEditIdEspecialidad] = useState<string>("")
 
-  const [especialidadesPorSucursal, setEspecialidadesPorSucursal] = useState<CatalogoEspecialidadSucursalDto[]>([])
+  const [especialidadesClinica, setEspecialidadesClinica] = useState<EspecialidadDto[]>([])
+  const [especialidadesPorSucursal, setEspecialidadesPorSucursal] = useState<EspecialidadSucursalDto[]>([])
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(8)
@@ -89,17 +92,38 @@ export function useDoctorsPage() {
 
       if (!admin) return
 
-      const [sucursalesClinica, catalogo] = await Promise.all([
+      const [sucursalesClinica, especialidadesDoctorClinica] = await Promise.all([
         sucursalService.obtenerPorClinica(perfil.idClinica),
-        citaService.obtenerCatalogoPublico(perfil.idClinica),
+        authService.getDoctorEspecialidadesByClinica(perfil.idClinica),
       ])
+
+      const especialidadesPorSucursalColeccion = await Promise.all(
+        sucursalesClinica.map((sucursal) =>
+          authService.getDoctorEspecialidadesBySucursal(perfil.idClinica, sucursal.id)
+        )
+      )
+
+      const especialidadesSucursal = especialidadesPorSucursalColeccion.flat()
 
       await loadWorkers(perfil.idClinica, "all", "", false)
 
       setSucursales(sucursalesClinica)
-      setEspecialidadesPorSucursal(catalogo.especialidadesPorSucursal)
+      setEspecialidadesClinica(especialidadesDoctorClinica)
+      setEspecialidadesPorSucursal(especialidadesSucursal)
       if (sucursalesClinica.length > 0) {
-        setIdSucursalCrear(String(sucursalesClinica[0].id))
+        const primeraSucursalId = sucursalesClinica[0].id
+        setIdSucursalCrear(String(primeraSucursalId))
+
+        const roles = await authService.getRolesBySucursal(perfil.idClinica, primeraSucursalId)
+        setRolesDisponibles(roles)
+
+        const rolDoctor = roles.find((item) => item.nombre.toLowerCase() === "doctor")
+        const rolDefault = rolDoctor ?? roles[0]
+        if (rolDefault) {
+          setRol(rolDefault.id)
+          setEditRol(rolDefault.id)
+          setEditRolesDisponibles(roles)
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo cargar trabajadores")
@@ -107,6 +131,52 @@ export function useDoctorsPage() {
       setLoading(false)
     }
   }, [loadWorkers])
+
+  useEffect(() => {
+    if (!clinicId || !isAdmin || !idSucursalCrear) return
+
+    const run = async () => {
+      try {
+        const roles = await authService.getRolesBySucursal(clinicId, Number(idSucursalCrear))
+        setRolesDisponibles(roles)
+
+        if (!roles.some((item) => item.id === rol)) {
+          const rolDoctor = roles.find((item) => item.nombre.toLowerCase() === "doctor")
+          const rolDefault = rolDoctor ?? roles[0]
+          if (rolDefault) {
+            setRol(rolDefault.id)
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudieron cargar roles")
+      }
+    }
+
+    run()
+  }, [clinicId, isAdmin, idSucursalCrear, rol])
+
+  useEffect(() => {
+    if (!clinicId || !isAdmin || !editOpen || !editIdSucursal) return
+
+    const run = async () => {
+      try {
+        const roles = await authService.getRolesBySucursal(clinicId, Number(editIdSucursal))
+        setEditRolesDisponibles(roles)
+
+        if (!roles.some((item) => item.id === editRol)) {
+          const rolDoctor = roles.find((item) => item.nombre.toLowerCase() === "doctor")
+          const rolDefault = rolDoctor ?? roles[0]
+          if (rolDefault) {
+            setEditRol(rolDefault.id)
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudieron cargar roles de edición")
+      }
+    }
+
+    run()
+  }, [clinicId, isAdmin, editOpen, editIdSucursal, editRol])
 
   useEffect(() => {
     loadData()
@@ -127,30 +197,42 @@ export function useDoctorsPage() {
   }, [clinicId, isAdmin, sucursalFiltro, buscarNombre, showInactive, loadWorkers])
 
   const workersFiltered = useMemo(() => {
-    const sinAdmins = workers.filter((w) => w.idRol !== 1)
-
-    if (rolFiltro === "all") return sinAdmins
+    if (rolFiltro === "all") return workers
 
     const rolNumero = Number(rolFiltro) as UsuarioRol
-    return sinAdmins.filter((w) => w.idRol === rolNumero)
+    return workers.filter((w) => w.idRol === rolNumero)
   }, [workers, rolFiltro])
+
+  const roleOptions = useMemo(() => buildRoleOptions(rolesDisponibles), [rolesDisponibles])
+  const editRoleOptions = useMemo(() => buildRoleOptions(editRolesDisponibles), [editRolesDisponibles])
+
+  const selectedCreateRoleName = useMemo(
+    () => rolesDisponibles.find((item) => item.id === rol)?.nombre ?? "",
+    [rolesDisponibles, rol]
+  )
+
+  const selectedEditRoleName = useMemo(() => {
+    const inEditRoles = editRolesDisponibles.find((item) => item.id === editRol)?.nombre
+    if (inEditRoles) return inEditRoles
+    return rolesDisponibles.find((item) => item.id === editRol)?.nombre ?? ""
+  }, [editRolesDisponibles, rolesDisponibles, editRol])
 
   const especialidadesDisponiblesCrear = useMemo(() => {
     const idSucursal = Number(idSucursalCrear)
-    if (!idSucursal || !rolRequiereEspecialidad(rol)) return []
+    if (!idSucursal || !rolRequiereEspecialidadPorNombre(selectedCreateRoleName)) return []
 
     return especialidadesPorSucursal.filter((item) => item.idSucursal === idSucursal)
-  }, [especialidadesPorSucursal, idSucursalCrear, rol])
+  }, [especialidadesPorSucursal, idSucursalCrear, selectedCreateRoleName])
 
   const especialidadesDisponiblesEdit = useMemo(() => {
     const idSucursal = Number(editIdSucursal)
-    if (!idSucursal || !rolRequiereEspecialidad(editRol)) return []
+    if (!idSucursal || !rolRequiereEspecialidadPorNombre(selectedEditRoleName)) return []
 
     return especialidadesPorSucursal.filter((item) => item.idSucursal === idSucursal)
-  }, [especialidadesPorSucursal, editIdSucursal, editRol])
+  }, [especialidadesPorSucursal, editIdSucursal, selectedEditRoleName])
 
   useEffect(() => {
-    if (!rolRequiereEspecialidad(rol)) {
+    if (!rolRequiereEspecialidadPorNombre(selectedCreateRoleName)) {
       setIdEspecialidadCrear("")
       return
     }
@@ -162,10 +244,10 @@ export function useDoctorsPage() {
 
       return especialidadesDisponiblesCrear[0] ? String(especialidadesDisponiblesCrear[0].idEspecialidad) : ""
     })
-  }, [rol, especialidadesDisponiblesCrear])
+  }, [selectedCreateRoleName, especialidadesDisponiblesCrear])
 
   useEffect(() => {
-    if (!rolRequiereEspecialidad(editRol)) {
+    if (!rolRequiereEspecialidadPorNombre(selectedEditRoleName)) {
       setEditIdEspecialidad("")
       return
     }
@@ -177,7 +259,7 @@ export function useDoctorsPage() {
 
       return especialidadesDisponiblesEdit[0] ? String(especialidadesDisponiblesEdit[0].idEspecialidad) : ""
     })
-  }, [editRol, especialidadesDisponiblesEdit])
+  }, [selectedEditRoleName, especialidadesDisponiblesEdit])
 
   useEffect(() => {
     setPage(1)
@@ -186,12 +268,12 @@ export function useDoctorsPage() {
   const totalPages = Math.max(1, Math.ceil(workersFiltered.length / pageSize))
 
   const correoValido = useMemo(
-    () => emailRegex.test(correo.trim().toLowerCase()),
+    () => EMAIL_REGEX.test(correo.trim().toLowerCase()),
     [correo]
   )
 
   const editCorreoValido = useMemo(
-    () => emailRegex.test(editCorreo.trim().toLowerCase()),
+    () => EMAIL_REGEX.test(editCorreo.trim().toLowerCase()),
     [editCorreo]
   )
 
@@ -205,8 +287,11 @@ export function useDoctorsPage() {
 
     if (!clinicId) return
 
+    const roleName = selectedCreateRoleName.toLowerCase()
+    const requiereEspecialidad = rolRequiereEspecialidadPorNombre(selectedCreateRoleName)
+
     const idSucursal = Number(idSucursalCrear)
-    if (!idSucursal || idSucursal <= 0) {
+    if (roleName !== "admin" && (!idSucursal || idSucursal <= 0)) {
       const message = "Debes seleccionar una sucursal"
       setError(message)
       showToast(message, "warning")
@@ -221,7 +306,7 @@ export function useDoctorsPage() {
     }
 
     const idEspecialidad = Number(idEspecialidadCrear)
-    if (rolRequiereEspecialidad(rol) && (!idEspecialidad || idEspecialidad <= 0)) {
+    if (requiereEspecialidad && (!idEspecialidad || idEspecialidad <= 0)) {
       const message = "Debes seleccionar una especialidad para el profesional"
       setError(message)
       showToast(message, "warning")
@@ -236,14 +321,17 @@ export function useDoctorsPage() {
         nombreCompleto: nombreCompleto.trim(),
         correo: correo.trim().toLowerCase(),
         idClinica: clinicId,
-        idSucursal,
+        idSucursal: roleName === "admin" ? undefined : idSucursal,
         idRol: rol,
-        idEspecialidad: rolRequiereEspecialidad(rol) ? idEspecialidad : undefined,
+        idEspecialidad: requiereEspecialidad ? idEspecialidad : undefined,
       })
 
       setNombreCompleto("")
       setCorreo("")
-      setRol(2)
+      const rolDoctor = rolesDisponibles.find((item) => item.nombre.toLowerCase() === "doctor")
+      if (rolDoctor) {
+        setRol(rolDoctor.id)
+      }
       setIdEspecialidadCrear("")
       setCreateOpen(false)
 
@@ -267,9 +355,10 @@ export function useDoctorsPage() {
     setSelectedWorker(worker)
     setEditNombreCompleto(worker.nombreCompleto)
     setEditCorreo(worker.correo)
-    setEditRol(worker.idRol === 1 ? 2 : worker.idRol)
+    setEditRol(worker.idRol)
     setEditIdSucursal(worker.idSucursal ? String(worker.idSucursal) : "")
     setEditIdEspecialidad(worker.idEspecialidad ? String(worker.idEspecialidad) : "")
+    setEditRolesDisponibles([])
     setEditOpen(true)
   }
 
@@ -278,8 +367,18 @@ export function useDoctorsPage() {
 
     if (!selectedWorker) return
 
+    const roleName = selectedEditRoleName.toLowerCase()
+    const requiereEspecialidad = rolRequiereEspecialidadPorNombre(selectedEditRoleName)
     const idSucursal = Number(editIdSucursal)
-    if (!idSucursal || idSucursal <= 0) {
+
+    if (!editRolesDisponibles.some((item) => item.id === editRol)) {
+      const message = "El rol seleccionado no pertenece a la sucursal indicada"
+      setError(message)
+      showToast(message, "warning")
+      return
+    }
+
+    if (roleName !== "admin" && (!idSucursal || idSucursal <= 0)) {
       const message = "Debes seleccionar una sucursal válida"
       setError(message)
       showToast(message, "warning")
@@ -294,7 +393,7 @@ export function useDoctorsPage() {
     }
 
     const idEspecialidad = Number(editIdEspecialidad)
-    if (rolRequiereEspecialidad(editRol) && (!idEspecialidad || idEspecialidad <= 0)) {
+    if (requiereEspecialidad && (!idEspecialidad || idEspecialidad <= 0)) {
       const message = "Debes seleccionar una especialidad para el profesional"
       setError(message)
       showToast(message, "warning")
@@ -308,9 +407,9 @@ export function useDoctorsPage() {
       await usuarioService.actualizar(selectedWorker.id, {
         nombreCompleto: editNombreCompleto.trim(),
         correo: editCorreo.trim().toLowerCase(),
-        idSucursal,
+        idSucursal: roleName === "admin" ? undefined : idSucursal,
         idRol: editRol,
-        idEspecialidad: rolRequiereEspecialidad(editRol) ? idEspecialidad : undefined,
+        idEspecialidad: requiereEspecialidad ? idEspecialidad : undefined,
       })
 
       if (clinicId) {
@@ -399,6 +498,10 @@ export function useDoctorsPage() {
     error,
     isAdmin,
     sucursales,
+    roleOptions,
+    editRoleOptions,
+    selectedCreateRoleName,
+    selectedEditRoleName,
     createOpen,
     setCreateOpen,
     createLoading,
@@ -414,6 +517,7 @@ export function useDoctorsPage() {
     idEspecialidadCrear,
     setIdEspecialidadCrear,
     especialidadesDisponiblesCrear,
+    especialidadesClinica,
     sucursalFiltro,
     setSucursalFiltro,
     rolFiltro,

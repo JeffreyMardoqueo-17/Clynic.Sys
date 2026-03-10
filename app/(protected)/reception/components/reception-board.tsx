@@ -50,9 +50,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { horarioSucursalService } from "@/services/horario-sucursal.service"
 import { servicioService } from "@/services/servicio.service"
 
 import type { CitaResponseDto } from "@/types/cita"
+import type { HorarioSucursalResponseDto } from "@/types/horario-sucursal"
 import type { CapacidadEspecialidadDiaDto } from "@/types/servicio"
 
 type ReceptionSection = "resumen" | "agenda" | "edicion" | "cancelaciones" | "bitacora"
@@ -97,6 +99,11 @@ function toDateKey(date: Date) {
   return `${year}-${month}-${day}`
 }
 
+function getDiaSemanaSistema(date: Date) {
+  const jsDay = date.getDay()
+  return jsDay === 0 ? 7 : jsDay
+}
+
 function minutesUntil(fechaIso: string, nowMs: number) {
   const now = nowMs
   const target = new Date(fechaIso).getTime()
@@ -125,9 +132,34 @@ export function ReceptionBoard() {
   const [ventanaCancelacionHoras, setVentanaCancelacionHoras] = useState<2 | 4 | 8 | 12 | 24>(8)
   const [ventanaNotificacionHoras, setVentanaNotificacionHoras] = useState<6 | 12 | 24 | 48>(24)
   const [nowMs, setNowMs] = useState<number>(() => new Date().getTime())
+  const [diasLaboralesSucursal, setDiasLaboralesSucursal] = useState<Set<number> | null>(null)
   const sucursalActivaId = vm.role === "Admin"
     ? (sucursalVista === "all" ? 0 : sucursalVista)
     : (vm.idSucursalUsuario || 0)
+
+  const esDiaLaboral = (date: Date) => {
+    if (diasLaboralesSucursal === null) return true
+    return diasLaboralesSucursal.has(getDiaSemanaSistema(date))
+  }
+
+  const moverPorDiasLaborales = (base: Date, cantidad: number) => {
+    if (cantidad === 0) return new Date(base)
+
+    const direction = cantidad > 0 ? 1 : -1
+    let remaining = Math.abs(cantidad)
+    let current = new Date(base)
+    let guard = 0
+
+    while (remaining > 0 && guard < 365) {
+      current = addDays(current, direction)
+      guard += 1
+      if (esDiaLaboral(current)) {
+        remaining -= 1
+      }
+    }
+
+    return current
+  }
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -138,10 +170,53 @@ export function ReceptionBoard() {
   }, [])
 
   useEffect(() => {
+    if (!sucursalActivaId) {
+      setDiasLaboralesSucursal(null)
+      return
+    }
+
+    let active = true
+
+    horarioSucursalService
+      .obtenerPorSucursal(sucursalActivaId)
+      .then((rows: HorarioSucursalResponseDto[]) => {
+        if (!active) return
+        const dias = new Set(rows.map((item) => item.diaSemana).filter((dia) => dia >= 1 && dia <= 7))
+        setDiasLaboralesSucursal(dias)
+      })
+      .catch(() => {
+        if (active) {
+          setDiasLaboralesSucursal(null)
+        }
+      })
+
+    return () => {
+      active = false
+    }
+  }, [sucursalActivaId])
+
+  useEffect(() => {
+    if (diasLaboralesSucursal === null || diasLaboralesSucursal.size === 0) return
+
+    const selected = new Date(`${fechaAgenda}T00:00:00`)
+    if (esDiaLaboral(selected)) return
+
+    for (let i = 0; i < 14; i += 1) {
+      const next = addDays(selected, i + 1)
+      if (esDiaLaboral(next)) {
+        const nextKey = toDateKey(next)
+        setFechaAgenda(nextKey)
+        setFechaBaseVista(nextKey)
+        return
+      }
+    }
+  }, [fechaAgenda, diasLaboralesSucursal])
+
+  useEffect(() => {
     if (!vm.idClinica || !fechaBaseVista) return
 
     const inicio = new Date(`${fechaBaseVista}T00:00:00`)
-    const fin = addDays(inicio, diasVista - 1)
+    const fin = moverPorDiasLaborales(inicio, Math.max(0, diasVista - 1))
     const fechaDesde = toDateKey(inicio)
     const fechaHasta = toDateKey(fin)
 
@@ -169,7 +244,7 @@ export function ReceptionBoard() {
     return () => {
       active = false
     }
-  }, [vm.idClinica, fechaBaseVista, diasVista, sucursalActivaId])
+  }, [vm.idClinica, fechaBaseVista, diasVista, sucursalActivaId, diasLaboralesSucursal])
 
   const agendaDia = useMemo(() => {
     const { start, end } = toDayRange(fechaAgenda)
@@ -239,8 +314,18 @@ export function ReceptionBoard() {
       saturacion: ReturnType<typeof saturacionTag>
     }>
 
-    for (let i = 0; i < diasVista; i += 1) {
-      const current = addDays(inicio, i)
+    let offset = 0
+    let guard = 0
+
+    while (dias.length < diasVista && guard < 120) {
+      const current = addDays(inicio, offset)
+      offset += 1
+      guard += 1
+
+      if (!esDiaLaboral(current)) {
+        continue
+      }
+
       const key = toDateKey(current)
       const rows = capacidadRows.filter((item) => (item.fecha ?? "").slice(0, 10) === key)
       const total = Math.max(1, rows.reduce((acc, item) => acc + Math.max(0, item.citasPosiblesDia), 0))
@@ -261,7 +346,7 @@ export function ReceptionBoard() {
     }
 
     return dias
-  }, [fechaBaseVista, diasVista, capacidadRows])
+  }, [fechaBaseVista, diasVista, capacidadRows, diasLaboralesSucursal])
 
   const resumenEspecialidades = useMemo(() => {
     const grouped = new Map<number, {
@@ -307,12 +392,12 @@ export function ReceptionBoard() {
 
   const irRangoAnterior = () => {
     const base = new Date(`${fechaBaseVista}T00:00:00`)
-    setFechaBaseVista(toDateKey(addDays(base, -diasVista)))
+    setFechaBaseVista(toDateKey(moverPorDiasLaborales(base, -diasVista)))
   }
 
   const irRangoSiguiente = () => {
     const base = new Date(`${fechaBaseVista}T00:00:00`)
-    setFechaBaseVista(toDateKey(addDays(base, diasVista)))
+    setFechaBaseVista(toDateKey(moverPorDiasLaborales(base, diasVista)))
   }
 
   const resumenRango = useMemo(() => {
@@ -418,7 +503,7 @@ export function ReceptionBoard() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-6">
+      <div className="reception-board-shell space-y-6">
         <header className="rounded-2xl border bg-linear-to-r from-primary/15 via-background to-primary/5 p-5 md:p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -846,11 +931,11 @@ export function ReceptionBoard() {
                     <p className="flex items-center gap-1 text-xs text-muted-foreground"><Sparkles className="size-3.5" /> Capacidad total aprox</p>
                     <p className="text-xl font-semibold">{resumenRango.totalCapacidad}</p>
                   </div>
-                  <div className="rounded-lg border border-amber-300/40 bg-amber-50/40 p-3">
+                  <div className="rounded-lg border border-chart-1/35 bg-chart-1/10 p-3">
                     <p className="flex items-center gap-1 text-xs text-muted-foreground"><Activity className="size-3.5" /> Ocupadas aprox</p>
                     <p className="text-xl font-semibold">{resumenRango.totalOcupado}</p>
                   </div>
-                  <div className="rounded-lg border border-emerald-300/40 bg-emerald-50/40 p-3">
+                  <div className="rounded-lg border border-chart-2/35 bg-chart-2/10 p-3">
                     <p className="flex items-center gap-1 text-xs text-muted-foreground"><CalendarCheck2 className="size-3.5" /> Libres aprox</p>
                     <p className="text-xl font-semibold">{resumenRango.totalDisponible}</p>
                   </div>
@@ -860,7 +945,7 @@ export function ReceptionBoard() {
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-primary/20 bg-linear-to-r from-primary/10 to-background p-3 text-xs text-muted-foreground">
+                <div className="rounded-lg border border-primary/25 bg-card p-3 text-xs text-muted-foreground">
                   Aprox por dia en este rango: capacidad {promediosRango.capacidadDiaAprox}, ocupadas {promediosRango.ocupadasDiaAprox}, libres {promediosRango.libresDiaAprox}.
                 </div>
 
@@ -907,7 +992,7 @@ export function ReceptionBoard() {
                   </div>
 
                   <div className="xl:col-span-4">
-                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <div className="rounded-xl border border-primary/25 bg-card p-4">
                       <div className="mb-3 flex items-center gap-2">
                         <CalendarDays className="size-4 text-primary" />
                         <p className="font-medium">Dia seleccionado</p>
@@ -943,7 +1028,7 @@ export function ReceptionBoard() {
                     {resumenEspecialidades.map((esp) => {
                       const pct = esp.posibles > 0 ? Math.min(100, Math.round((esp.agendadas / esp.posibles) * 100)) : 0
                       return (
-                        <div key={esp.idEspecialidad} className="rounded-xl border p-3">
+                        <div key={esp.idEspecialidad} className="rounded-xl border border-primary/20 bg-card p-3">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <p className="font-medium">{esp.nombreEspecialidad}</p>
                             <span className="text-xs text-muted-foreground">Saturacion prom: {esp.saturacionPromedio}%</span>
@@ -972,7 +1057,7 @@ export function ReceptionBoard() {
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {resumenSucursalesAdmin.map((item) => (
-                    <div key={item.id} className="rounded-xl border p-3">
+                    <div key={item.id} className="rounded-xl border border-primary/20 bg-card p-3">
                       <p className="font-medium">{item.nombre}</p>
                       <p className="mt-1 text-xs text-muted-foreground">{item.ocupadas} citas activas</p>
                       <div className="mt-2 flex items-center gap-2">
@@ -985,9 +1070,9 @@ export function ReceptionBoard() {
               </Card>
             )}
 
-            <Card className="border-amber-300/40 bg-amber-50/40">
+            <Card className="border-primary/25 bg-card">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base"><BellRing className="size-4 text-amber-700" /> Alertas de cancelacion</CardTitle>
+                <CardTitle className="flex items-center gap-2 text-base"><BellRing className="size-4 text-primary" /> Alertas de cancelacion</CardTitle>
                 <CardDescription>
                   Cancelaciones detectadas en las ultimas {ventanaNotificacionHoras} horas.
                 </CardDescription>
@@ -1014,7 +1099,7 @@ export function ReceptionBoard() {
                 ) : (
                   <div className="space-y-2">
                     {actividadCancelacionesRecientes.slice(0, 6).map((item) => (
-                      <div key={item.id} className="rounded-lg border border-amber-300/40 bg-background p-3">
+                      <div key={item.id} className="rounded-lg border border-primary/20 bg-background p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-sm font-medium">Cita #{item.idCita} cancelada</p>
                           <p className="text-xs text-muted-foreground">{new Date(item.fechaCreacion).toLocaleString()}</p>

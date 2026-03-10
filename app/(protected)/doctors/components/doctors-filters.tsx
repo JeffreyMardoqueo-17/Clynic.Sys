@@ -7,7 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SucursalResponseDto } from "@/types/sucursal"
-import { ROL_OPTIONS } from "./doctors-utils"
+
+type RoleOption = {
+  value: number
+  label: string
+}
 
 type Props = {
   sucursales: SucursalResponseDto[]
@@ -17,6 +21,7 @@ type Props = {
   onSucursalFiltroChange: (value: string) => void
   buscarNombre: string
   onBuscarNombreChange: (value: string) => void
+  roleOptions: RoleOption[]
   showInactive: boolean
   onToggleInactive: () => void
 }
@@ -29,6 +34,7 @@ export function DoctorsFilters({
   onSucursalFiltroChange,
   buscarNombre,
   onBuscarNombreChange,
+  roleOptions,
   showInactive,
   onToggleInactive,
 }: Props) {
@@ -74,7 +80,7 @@ export function DoctorsFilters({
             className="border-input bg-background ring-offset-background focus-visible:ring-ring/50 focus-visible:border-ring h-9 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
           >
             <option value="all">Todos</option>
-            {ROL_OPTIONS.map((option) => (
+            {roleOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

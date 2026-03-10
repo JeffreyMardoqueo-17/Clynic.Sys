@@ -9,7 +9,9 @@ import {
   CreateCitaPublicaDto,
   EstadoCita,
   RegistrarConsultaMedicaDto,
+  ReprogramarCitaDto,
   ConsultaMedicaResponseDto,
+  CitaActividadResponseDto,
 } from "@/types/cita"
 
 export const citaService = {
@@ -168,6 +170,53 @@ export const citaService = {
 
     if (!response.ok) {
       throw new Error(await getApiErrorMessage(response, "No se pudo cambiar el estado de la cita"))
+    }
+
+    return response.json()
+  },
+
+  async reprogramar(idCita: number, data: ReprogramarCitaDto): Promise<CitaResponseDto> {
+    const response = await fetch(`${getApiUrl()}/api/Citas/${idCita}/reprogramar`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo reprogramar la cita"))
+    }
+
+    return response.json()
+  },
+
+  async obtenerActividadPorClinica(
+    idClinica: number,
+    options?: {
+      fechaDesde?: string
+      fechaHasta?: string
+      maxResultados?: number
+    }
+  ): Promise<CitaActividadResponseDto[]> {
+    const params = new URLSearchParams()
+
+    if (options?.fechaDesde) params.set("fechaDesde", options.fechaDesde)
+    if (options?.fechaHasta) params.set("fechaHasta", options.fechaHasta)
+    if (typeof options?.maxResultados === "number" && options.maxResultados > 0) {
+      params.set("maxResultados", String(options.maxResultados))
+    }
+
+    const query = params.toString()
+    const response = await fetch(`${getApiUrl()}/api/Citas/clinica/${idClinica}/actividad${query ? `?${query}` : ""}`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo cargar el log de actividad"))
     }
 
     return response.json()

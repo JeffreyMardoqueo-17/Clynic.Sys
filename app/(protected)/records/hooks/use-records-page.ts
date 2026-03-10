@@ -25,7 +25,7 @@ export function useRecordsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [role, setRole] = useState<"Admin" | "Doctor" | "Nutricionista" | "Fisioterapeuta" | "Recepcionista" | "Unknown">("Unknown")
+  const [role, setRole] = useState<"Admin" | "Doctor" | "Recepcionista" | "Unknown">("Unknown")
   const [idClinica, setIdClinica] = useState(0)
   const [busqueda, setBusqueda] = useState("")
 
@@ -66,7 +66,7 @@ export function useRecordsPage() {
 
     try {
       const profile = await authService.getProfile()
-      const normalizedRole = normalizeRole(profile.rol)
+      const normalizedRole = normalizeRole(profile.nombreRol ?? profile.rol ?? profile.idRol)
 
       setRole(normalizedRole)
       setIdClinica(profile.idClinica)

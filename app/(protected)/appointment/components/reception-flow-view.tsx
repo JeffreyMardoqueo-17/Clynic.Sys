@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CheckCircle2, ClipboardCheck, Stethoscope } from "lucide-react"
+import { CheckCircle2, ClipboardCheck, FileText, Stethoscope, Tag, Timer } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,18 +15,16 @@ import {
 } from "@/components/ui/dialog"
 import { CitaResponseDto } from "@/types/cita"
 import { SucursalResponseDto } from "@/types/sucursal"
-import { UsuarioResponseDto } from "@/types/usuario"
 
 type ReceptionFlowViewProps = {
   role: "Admin" | "Doctor" | "Nutricionista" | "Fisioterapeuta" | "Recepcionista" | "Unknown"
   citas: CitaResponseDto[]
   sucursales: SucursalResponseDto[]
-  doctores: UsuarioResponseDto[]
   estadoLoadingId: number | null
   consultaLoading: boolean
   canCreateInternal: boolean
   marcarPresente: (idCita: number) => Promise<void>
-  pasarAConsulta: (idCita: number, idDoctorAsignado?: number) => Promise<void>
+  pasarAConsulta: (idCita: number) => Promise<void>
   cerrarProcesoRecepcion: (idCita: number) => Promise<void>
   setIdCitaConsulta: (idCita: number) => void
   agendarSeguimiento: (idCitaBase: number, fechaHoraSeguimiento: string) => Promise<void>
@@ -59,11 +57,40 @@ function ordenarPorInicioAsc(citas: CitaResponseDto[]) {
   )
 }
 
+function fechaReferenciaCierre(cita: CitaResponseDto) {
+  if (cita.consultaMedica?.fechaConsulta) {
+    return new Date(cita.consultaMedica.fechaConsulta).getTime()
+  }
+
+  if (cita.fechaHoraFinReal) {
+    return new Date(cita.fechaHoraFinReal).getTime()
+  }
+
+  return new Date(cita.fechaHoraInicioPlan).getTime()
+}
+
+const SPECIALTY_COLORS = [
+  { panel: "border-sky-200 bg-sky-50/70", chip: "border-sky-300 bg-sky-100 text-sky-800" },
+  { panel: "border-emerald-200 bg-emerald-50/70", chip: "border-emerald-300 bg-emerald-100 text-emerald-800" },
+  { panel: "border-amber-200 bg-amber-50/70", chip: "border-amber-300 bg-amber-100 text-amber-800" },
+  { panel: "border-violet-200 bg-violet-50/70", chip: "border-violet-300 bg-violet-100 text-violet-800" },
+  { panel: "border-fuchsia-200 bg-fuchsia-50/70", chip: "border-fuchsia-300 bg-fuchsia-100 text-fuchsia-800" },
+  { panel: "border-rose-200 bg-rose-50/70", chip: "border-rose-300 bg-rose-100 text-rose-800" },
+]
+
+function getSpecialtyStyle(idEspecialidad?: number | null) {
+  if (!idEspecialidad || idEspecialidad < 1) {
+    return { panel: "border-slate-200 bg-slate-50/70", chip: "border-slate-300 bg-slate-100 text-slate-700" }
+  }
+
+  const index = (idEspecialidad - 1) % SPECIALTY_COLORS.length
+  return SPECIALTY_COLORS[index]
+}
+
 export function ReceptionFlowView({
   role,
   citas,
   sucursales,
-  doctores,
   estadoLoadingId,
   consultaLoading,
   canCreateInternal,
@@ -78,14 +105,8 @@ export function ReceptionFlowView({
   const isReceptionOrAdmin = roleLower === "admin" || roleLower === "recepcionista"
   const isAdminOrDoctor = roleLower === "admin" || roleLower === "doctor"
   const [fechaSeguimientoPorCita, setFechaSeguimientoPorCita] = useState<Record<number, string>>({})
-  const [doctorSeleccionadoPorCita, setDoctorSeleccionadoPorCita] = useState<Record<number, number>>({})
   const [vistaCierre, setVistaCierre] = useState<"pendientes" | "hoy" | "historial">("pendientes")
   const [citaActiva, setCitaActiva] = useState<CitaResponseDto | null>(null)
-
-  const doctorLabelPorId = useMemo(
-    () => Object.fromEntries(doctores.map((doctor) => [doctor.id, doctor.nombreCompleto])),
-    [doctores]
-  )
 
   const colaRecepcion = useMemo(
     () => ordenarPorInicioAsc(citas.filter((cita) => cita.estado === 1 || cita.estado === 2 || cita.estado === 5)),
@@ -98,7 +119,9 @@ export function ReceptionFlowView({
   )
 
   const pendientesCierre = useMemo(
-    () => ordenarPorInicioAsc(citas.filter((cita) => cita.estado === 6 && !!cita.consultaMedica)),
+    () => [...citas]
+      .filter((cita) => cita.estado === 6 && !!cita.consultaMedica)
+      .sort((a, b) => fechaReferenciaCierre(a) - fechaReferenciaCierre(b)),
     [citas]
   )
 
@@ -176,7 +199,7 @@ export function ReceptionFlowView({
               <button
                 key={cita.id}
                 type="button"
-                className="w-full space-y-2 rounded-lg border border-orange-200 bg-orange-50/70 p-3 text-left shadow-sm transition hover:bg-orange-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className={`w-full space-y-2 rounded-lg border p-3 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${getSpecialtyStyle(cita.idEspecialidad).panel}`}
                 onClick={() => setCitaActiva(cita)}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -186,19 +209,16 @@ export function ReceptionFlowView({
                 <p className="text-xs text-muted-foreground">
                   {new Date(cita.fechaHoraInicioPlan).toLocaleString()} · {sucursales.find((s) => s.id === cita.idSucursal)?.nombre ?? `Sucursal ${cita.idSucursal}`}
                 </p>
-                {(cita.estado === 5 || cita.estado === 6) && (
-                  <p className="text-xs text-muted-foreground">
-                    {cita.idDoctor
-                      ? `Lo atenderá ${doctorLabelPorId[cita.idDoctor] ?? `Doctor #${cita.idDoctor}`}`
-                      : "Doctor pendiente de asignación"}
+                <div className="rounded-md border border-black/10 bg-white/70 px-2 py-1.5">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <Tag className="size-3" /> Especialidad
                   </p>
-                )}
+                  <p className="text-sm font-semibold text-foreground">{cita.nombreEspecialidad || "Sin especialidad"}</p>
+                </div>
+                <Badge variant="outline" className={getSpecialtyStyle(cita.idEspecialidad).chip}>Color especialidad</Badge>
                 <div className="flex flex-wrap gap-2">
                   {isReceptionOrAdmin && (cita.estado === 1 || cita.estado === 2) && (
                     <Badge variant="outline">Click para marcar llegada</Badge>
-                  )}
-                  {isReceptionOrAdmin && cita.estado === 5 && (
-                    <Badge variant="secondary">Click para pasar a doctor</Badge>
                   )}
                 </div>
               </button>
@@ -221,14 +241,19 @@ export function ReceptionFlowView({
               <button
                 key={cita.id}
                 type="button"
-                className="w-full space-y-2 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-left shadow-sm transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className={`w-full space-y-2 rounded-lg border p-3 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${getSpecialtyStyle(cita.idEspecialidad).panel}`}
                 onClick={() => setCitaActiva(cita)}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold">#{cita.id} · {cita.nombrePaciente}</p>
                   <Badge variant={estadoBadgeVariant(cita.estado)} className="font-semibold">{estadoLabel(cita.estado)}</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">Doctor: {cita.idDoctor ? `#${cita.idDoctor}` : "Sin asignar"}</p>
+                <div className="rounded-md border border-black/10 bg-white/70 px-2 py-1.5">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <Tag className="size-3" /> Especialidad
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">{cita.nombreEspecialidad || "Sin especialidad"}</p>
+                </div>
                 {isAdminOrDoctor && <Badge variant="secondary">Click para abrir cierre de consulta</Badge>}
               </button>
             ))}
@@ -279,7 +304,7 @@ export function ReceptionFlowView({
                 key={cita.id}
                 role="button"
                 tabIndex={0}
-                className="w-full space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-left shadow-sm transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className={`w-full space-y-2 rounded-lg border p-3 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 ${getSpecialtyStyle(cita.idEspecialidad).panel}`}
                 onClick={() => setCitaActiva(cita)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -292,7 +317,18 @@ export function ReceptionFlowView({
                   <p className="text-sm font-semibold">#{cita.id} · {cita.nombrePaciente}</p>
                   <Badge variant={estadoBadgeVariant(cita.estado)} className="font-semibold">{estadoLabel(cita.estado)}</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">Diagnóstico: {cita.consultaMedica?.diagnostico || "Sin diagnóstico"}</p>
+                <div className="rounded-md border border-black/10 bg-white/70 px-2 py-1.5">
+                  <p className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    <Tag className="size-3" /> Especialidad
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">{cita.nombreEspecialidad || "Sin especialidad"}</p>
+                </div>
+                <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <FileText className="size-3" /> Diagnóstico: {cita.consultaMedica?.diagnostico || "Sin diagnóstico"}
+                </p>
+                <p className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Timer className="size-3" /> Finalizó doctor: {new Date(cita.consultaMedica?.fechaConsulta ?? cita.fechaHoraInicioPlan).toLocaleString()}
+                </p>
 
                 {canCreateInternal && (
                   <div className="grid gap-2 md:grid-cols-[1fr_auto]" onClick={(e) => e.stopPropagation()}>
@@ -338,7 +374,7 @@ export function ReceptionFlowView({
               <button
                 key={cita.id}
                 type="button"
-                className="w-full space-y-2 rounded-lg border border-blue-200 bg-blue-50/70 p-3 text-left shadow-sm transition hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className="bg-card hover:bg-accent/50 border-border w-full space-y-2 rounded-lg border p-3 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 onClick={() => setCitaActiva(cita)}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -349,7 +385,7 @@ export function ReceptionFlowView({
                   Cierre: {new Date(cita.fechaHoraFinReal ?? cita.consultaMedica?.fechaConsulta ?? cita.fechaHoraInicioPlan).toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Doctor: {cita.idDoctor ? (doctorLabelPorId[cita.idDoctor] ?? `Doctor #${cita.idDoctor}`) : "Sin asignar"}
+                  Especialidad: {cita.nombreEspecialidad || "N/A"}
                 </p>
               </button>
             ))}
@@ -358,7 +394,7 @@ export function ReceptionFlowView({
               <button
                 key={cita.id}
                 type="button"
-                className="w-full space-y-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3 text-left shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                className="bg-card hover:bg-accent/50 border-border w-full space-y-2 rounded-lg border p-3 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 onClick={() => setCitaActiva(cita)}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -422,33 +458,9 @@ export function ReceptionFlowView({
 
               {isReceptionOrAdmin && citaActiva.estado === 5 && (
                 <div className="rounded-md border p-3">
-                  <p className="font-semibold">Asignar doctor para consulta</p>
-                  <select
-                    className="border-input bg-background mt-2 w-full rounded-md border px-3 py-2 text-sm"
-                    value={doctorSeleccionadoPorCita[citaActiva.id] ?? citaActiva.idDoctor ?? ""}
-                    onChange={(e) =>
-                      setDoctorSeleccionadoPorCita((prev) => ({
-                        ...prev,
-                        [citaActiva.id]: Number(e.target.value),
-                      }))
-                    }
-                  >
-                    <option value="">Selecciona doctor</option>
-                    {doctores.map((doctor) => (
-                      <option key={doctor.id} value={doctor.id}>
-                        {doctor.nombreCompleto}
-                      </option>
-                    ))}
-                  </select>
+                  <p className="font-semibold">En cola de consulta por especialidad</p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {(() => {
-                      const idDoctorAsignado = doctorSeleccionadoPorCita[citaActiva.id] ?? citaActiva.idDoctor
-                      if (!idDoctorAsignado) {
-                        return "Selecciona quién atenderá esta cita para poder transferirla."
-                      }
-
-                      return `Lo atenderá ${doctorLabelPorId[idDoctorAsignado] ?? `Doctor #${idDoctorAsignado}`}.`
-                    })()}
+                    La cita ya está disponible para la especialidad {citaActiva.nombreEspecialidad || "N/A"}. El doctor decidirá el siguiente turno desde su panel.
                   </p>
                 </div>
               )}
@@ -467,20 +479,6 @@ export function ReceptionFlowView({
                   disabled={estadoLoadingId === citaActiva.id}
                 >
                   {estadoLoadingId === citaActiva.id ? "Actualizando..." : "Paciente llegó (Presente)"}
-                </Button>
-              )}
-
-              {isReceptionOrAdmin && citaActiva.estado === 5 && (
-                <Button
-                  type="button"
-                  onClick={async () => {
-                    const idDoctorAsignado = doctorSeleccionadoPorCita[citaActiva.id] ?? citaActiva.idDoctor
-                    await pasarAConsulta(citaActiva.id, idDoctorAsignado)
-                    cerrarDialogo()
-                  }}
-                  disabled={estadoLoadingId === citaActiva.id}
-                >
-                  {estadoLoadingId === citaActiva.id ? "Actualizando..." : "Pasar a Doctor (En consulta)"}
                 </Button>
               )}
 

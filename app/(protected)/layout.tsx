@@ -7,13 +7,14 @@ import { StatusAlert } from "@/components/components/status-alert"
 import { UserMenu } from "@/components/components/user-menu"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
+import { ModeToggle } from "@/components/components/mode-toggle"
 import { authService } from "@/services/auth.service"
 import { UsuarioResponseDto } from "@/types/auth"
 import { normalizeRole } from "@/lib/authorization"
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<UsuarioResponseDto | null>(null)
-  const role = normalizeRole(usuario?.rol)
+  const role = normalizeRole(usuario?.nombreRol ?? usuario?.rol ?? usuario?.idRol)
   const showForceChangeAlert = role !== "Admin" && Boolean(usuario?.debeCambiarClave)
 
   useEffect(() => {
@@ -37,12 +38,13 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider className="h-svh overflow-hidden">
-      <AppSidebar role={usuario?.rol} />
+      <AppSidebar role={usuario?.nombreRol ?? usuario?.rol ?? usuario?.idRol} />
       <SidebarInset className="h-full min-h-0 overflow-hidden">
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           <header className="border-border bg-background/95 sticky top-0 z-20 flex h-14 items-center justify-between border-b px-4 backdrop-blur">
             <SidebarTrigger />
             <div className="flex items-center gap-2">
+              <ModeToggle />
               <div className="text-right leading-tight">
                 <p className="text-foreground text-sm font-semibold">
                   {usuario?.nombreCompleto ?? "Usuario"}

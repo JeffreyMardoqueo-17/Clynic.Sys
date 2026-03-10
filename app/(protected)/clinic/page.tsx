@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Building2, MapPin, Phone, Hospital, Building } from "lucide-react"
+import Link from "next/link"
+import { MapPin, Phone, Hospital, Building, Globe } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { authService } from "@/services/auth.service"
 import { clinicaService } from "@/services/clinica.service"
@@ -95,6 +97,20 @@ export default function ClinicPage() {
       </Card>
 
       <section className="space-y-3">
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <div>
+              <p className="text-sm font-semibold">Landing de la clínica</p>
+              <p className="text-xs text-muted-foreground">Configura la landing pública, publicación y contenido comercial.</p>
+            </div>
+            <Button asChild>
+              <Link href="/clinic/landing">
+                <Globe className="size-4" /> Abrir landing builder
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
         <div>
           <h3 className="hc-page-title text-lg font-semibold">Sucursales ({sucursales.length})</h3>
           <p className="text-sm text-muted-foreground">

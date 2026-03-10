@@ -8,11 +8,18 @@ function isAuthPath(pathname: string) {
 }
 
 function isPublicPath(pathname: string) {
-  return pathname === "/" || pathname === "/agendar-cita" || pathname.startsWith("/agendar-cita/")
+  return pathname === "/" || pathname === "/agendar-cita" || pathname.startsWith("/agendar-cita/") || pathname.startsWith("/clynic/")
+}
+
+function getDefaultPathByRole(role: ReturnType<typeof normalizeRole>) {
+  if (role === "Recepcionista") return "/reception"
+  if (role === "Doctor") return "/doctor-panel"
+  return "/dashboard"
 }
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl
+
   const authPath = isAuthPath(pathname)
   const publicPath = isPublicPath(pathname)
 
@@ -42,15 +49,17 @@ export async function middleware(request: NextRequest) {
         idRol?: number
       }
 
-      const role = normalizeRole(profile?.rol ?? profile?.nombreRol ?? profile?.idRol)
+      const role = normalizeRole(profile?.nombreRol ?? profile?.rol ?? profile?.idRol)
 
       // Allow rendering unauthorized page without re-triggering authorization redirects.
       if (pathname === "/401") {
         return NextResponse.next()
       }
 
+      const defaultPath = getDefaultPathByRole(role)
+
       if (pathname === "/") {
-        return NextResponse.redirect(new URL("/dashboard", request.url))
+        return NextResponse.redirect(new URL(defaultPath, request.url))
       }
 
       if (!authPath && !canAccessPath(role, pathname)) {
@@ -58,7 +67,7 @@ export async function middleware(request: NextRequest) {
       }
 
       if (authPath) {
-        return NextResponse.redirect(new URL("/dashboard", request.url))
+        return NextResponse.redirect(new URL(defaultPath, request.url))
       }
 
       return NextResponse.next()

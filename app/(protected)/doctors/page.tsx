@@ -1,7 +1,5 @@
 "use client"
 
-import { BriefcaseMedical } from "lucide-react"
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CreateWorkerDialog } from "./components/create-worker-dialog"
 import { DoctorViewDialog } from "./components/doctor-view-dialog"
@@ -17,6 +15,10 @@ export default function DoctorsPage() {
     error,
     isAdmin,
     sucursales,
+    roleOptions,
+    editRoleOptions,
+    selectedCreateRoleName,
+    selectedEditRoleName,
     createOpen,
     setCreateOpen,
     createLoading,
@@ -109,6 +111,8 @@ export default function DoctorsPage() {
           onCorreoChange={setCorreo}
           rol={rol}
           onRolChange={setRol}
+          roleOptions={roleOptions}
+          selectedRoleLabel={selectedCreateRoleName}
           idSucursalCrear={idSucursalCrear}
           onIdSucursalCrearChange={setIdSucursalCrear}
           idEspecialidadCrear={idEspecialidadCrear}
@@ -129,6 +133,7 @@ export default function DoctorsPage() {
         onSucursalFiltroChange={setSucursalFiltro}
         buscarNombre={buscarNombre}
         onBuscarNombreChange={setBuscarNombre}
+        roleOptions={roleOptions}
         showInactive={showInactive}
         onToggleInactive={() => setShowInactive((prev) => !prev)}
       />
@@ -177,6 +182,8 @@ export default function DoctorsPage() {
         onCorreoChange={setEditCorreo}
         rol={editRol}
         onRolChange={setEditRol}
+        roleOptions={editRoleOptions}
+        selectedRoleLabel={selectedEditRoleName}
         idSucursal={editIdSucursal}
         onIdSucursalChange={setEditIdSucursal}
         idEspecialidad={editIdEspecialidad}

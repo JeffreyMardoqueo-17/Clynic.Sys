@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { normalizeRole } from "@/lib/authorization"
 import { useToast } from "@/hooks/use-toast"
 import { authService } from "@/services/auth.service"
@@ -9,10 +9,11 @@ import { historialClinicoService } from "@/services/historial-clinico.service"
 import { pacienteService } from "@/services/paciente.service"
 import { servicioService } from "@/services/servicio.service"
 import { sucursalService } from "@/services/sucursal.service"
+import { doctorRealtimeService } from "@/services/doctor-realtime.service"
 import { usuarioService } from "@/services/usuario.service"
-import { CatalogoEspecialidadSucursalDto, CitaResponseDto, EstadoCita, HorariosDisponiblesCitaDto } from "@/types/cita"
+import { CatalogoEspecialidadSucursalDto, CitaActividadResponseDto, CitaResponseDto, EstadoCita, HorariosDisponiblesCitaDto } from "@/types/cita"
 import { HistorialClinicoResponseDto } from "@/types/historial-clinico"
-import { PacienteResponseDto } from "@/types/paciente"
+import { CreatePacienteDto, PacienteResponseDto } from "@/types/paciente"
 import { ServicioResponseDto } from "@/types/servicio"
 import { SucursalResponseDto } from "@/types/sucursal"
 import { UsuarioResponseDto } from "@/types/usuario"
@@ -50,11 +51,13 @@ export function useAppointmentPage() {
 
   const [idClinica, setIdClinica] = useState(0)
   const [idUsuario, setIdUsuario] = useState(0)
+  const [idEspecialidadUsuario, setIdEspecialidadUsuario] = useState<number | null>(null)
   const [idSucursalUsuario, setIdSucursalUsuario] = useState<number | null>(null)
-  const [role, setRole] = useState<"Admin" | "Doctor" | "Nutricionista" | "Fisioterapeuta" | "Recepcionista" | "Unknown">("Unknown")
+  const [role, setRole] = useState<"Admin" | "Doctor" | "Recepcionista" | "Unknown">("Unknown")
 
   const [citas, setCitas] = useState<CitaResponseDto[]>([])
   const [citasTodas, setCitasTodas] = useState<CitaResponseDto[]>([])
+  const [actividadCitas, setActividadCitas] = useState<CitaActividadResponseDto[]>([])
   const [sucursales, setSucursales] = useState<SucursalResponseDto[]>([])
   const [pacientes, setPacientes] = useState<PacienteResponseDto[]>([])
   const [servicios, setServicios] = useState<ServicioResponseDto[]>([])
@@ -64,9 +67,17 @@ export function useAppointmentPage() {
   const [estadoFiltro, setEstadoFiltro] = useState<EstadoCita | "all">("all")
 
   const [createLoading, setCreateLoading] = useState(false)
+  const [crearPacienteLoading, setCrearPacienteLoading] = useState(false)
   const [idSucursalCrear, setIdSucursalCrear] = useState(0)
   const [idEspecialidadCrear, setIdEspecialidadCrear] = useState(0)
   const [idPacienteCrear, setIdPacienteCrear] = useState(0)
+  const [formNuevoPaciente, setFormNuevoPaciente] = useState<CreatePacienteDto>({
+    nombres: "",
+    apellidos: "",
+    correo: "",
+    telefono: "",
+    fechaNacimiento: "",
+  })
   const [idDoctorCrear, setIdDoctorCrear] = useState<number | "none">("none")
   const [fechaHoraCrear, setFechaHoraCrear] = useState("")
   const [idsServiciosCrear, setIdsServiciosCrear] = useState<number[]>([])
@@ -101,7 +112,7 @@ export function useAppointmentPage() {
   })
 
   const canCreateInternal = role === "Admin" || role === "Recepcionista"
-  const canRegisterConsult = role === "Admin" || role === "Doctor" || role === "Nutricionista" || role === "Fisioterapeuta"
+  const canRegisterConsult = role === "Admin" || role === "Doctor"
   const canFilterBySucursal = role === "Admin"
 
   useEffect(() => {
@@ -115,6 +126,7 @@ export function useAppointmentPage() {
         idSucursalCrear?: number
         idEspecialidadCrear?: number
         idPacienteCrear?: number
+        formNuevoPaciente?: CreatePacienteDto
         idDoctorCrear?: number | "none"
         fechaHoraCrear?: string
         idsServiciosCrear?: number[]
@@ -139,6 +151,15 @@ export function useAppointmentPage() {
       if (typeof draft.idSucursalCrear === "number") setIdSucursalCrear(draft.idSucursalCrear)
       if (typeof draft.idEspecialidadCrear === "number") setIdEspecialidadCrear(draft.idEspecialidadCrear)
       if (typeof draft.idPacienteCrear === "number") setIdPacienteCrear(draft.idPacienteCrear)
+      if (draft.formNuevoPaciente) {
+        setFormNuevoPaciente({
+          nombres: draft.formNuevoPaciente.nombres ?? "",
+          apellidos: draft.formNuevoPaciente.apellidos ?? "",
+          correo: draft.formNuevoPaciente.correo ?? "",
+          telefono: draft.formNuevoPaciente.telefono ?? "",
+          fechaNacimiento: draft.formNuevoPaciente.fechaNacimiento ?? "",
+        })
+      }
       if (draft.idDoctorCrear === "none" || typeof draft.idDoctorCrear === "number") setIdDoctorCrear(draft.idDoctorCrear)
       if (typeof draft.fechaHoraCrear === "string") setFechaHoraCrear(draft.fechaHoraCrear)
       if (Array.isArray(draft.idsServiciosCrear)) setIdsServiciosCrear(draft.idsServiciosCrear)
@@ -172,6 +193,7 @@ export function useAppointmentPage() {
         idSucursalCrear,
         idEspecialidadCrear,
         idPacienteCrear,
+        formNuevoPaciente,
         idDoctorCrear,
         fechaHoraCrear,
         idsServiciosCrear,
@@ -191,6 +213,7 @@ export function useAppointmentPage() {
     idSucursalCrear,
     idEspecialidadCrear,
     idPacienteCrear,
+    formNuevoPaciente,
     idDoctorCrear,
     fechaHoraCrear,
     idsServiciosCrear,
@@ -215,7 +238,7 @@ export function useAppointmentPage() {
         ? (idSucursalFiltro === "all" ? undefined : idSucursalFiltro)
         : (idSucursalUsuario ?? undefined)
 
-      const [citasHoy, citasCompletas] = await Promise.all([
+      const [citasHoy, citasCompletas, actividad] = await Promise.all([
         citaService.obtenerPorClinica(idClinica, {
           fechaDesde: todayRange.fechaDesde,
           fechaHasta: todayRange.fechaHasta,
@@ -226,10 +249,14 @@ export function useAppointmentPage() {
           idSucursal: idSucursalConsulta,
           estado: estadoFiltro === "all" ? undefined : estadoFiltro,
         }),
+        citaService.obtenerActividadPorClinica(idClinica, {
+          maxResultados: 80,
+        }),
       ])
 
       setCitas(citasHoy)
       setCitasTodas(citasCompletas)
+      setActividadCitas(actividad)
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudieron cargar las citas")
     }
@@ -245,6 +272,7 @@ export function useAppointmentPage() {
       setRole(normalizedRole)
       setIdClinica(profile.idClinica)
       setIdUsuario(profile.id)
+      setIdEspecialidadUsuario(profile.idEspecialidad ?? null)
       setIdSucursalUsuario(profile.idSucursal ?? null)
 
       const aplicarFiltroSucursal = normalizedRole !== "Admin" && !!profile.idSucursal
@@ -256,7 +284,7 @@ export function useAppointmentPage() {
 
       const todayRange = getTodayQueryRange()
 
-      const [sucursalesData, serviciosData, pacientesData, citasHoyData, citasCompletasData, usuariosClinica, catalogoCitas] = await Promise.all([
+      const [sucursalesData, serviciosData, pacientesData, citasHoyData, citasCompletasData, usuariosClinica, catalogoCitas, actividad] = await Promise.all([
         sucursalService.obtenerPorClinica(profile.idClinica),
         servicioService.obtenerPorClinica(profile.idClinica),
         pacienteService.obtenerPorClinica(profile.idClinica),
@@ -270,6 +298,7 @@ export function useAppointmentPage() {
         }),
         usuariosPromise,
         citaService.obtenerCatalogoPublico(profile.idClinica),
+        citaService.obtenerActividadPorClinica(profile.idClinica, { maxResultados: 80 }),
       ])
 
       setSucursales(sucursalesData)
@@ -277,12 +306,13 @@ export function useAppointmentPage() {
       setPacientes(pacientesData)
       setCitas(citasHoyData)
       setCitasTodas(citasCompletasData)
+      setActividadCitas(actividad)
       const especialidadesCatalogo = Array.isArray(catalogoCitas?.especialidadesPorSucursal)
         ? catalogoCitas.especialidadesPorSucursal
         : []
 
       setEspecialidadesPorSucursal(especialidadesCatalogo)
-      setDoctores(usuariosClinica.filter((usuario) => [2, 4, 5].includes(usuario.idRol) && usuario.activo))
+      setDoctores(usuariosClinica.filter((usuario) => usuario.idRol === 2 && usuario.activo))
 
       if (idSucursalForzada) {
         setIdSucursalFiltro(idSucursalForzada)
@@ -315,6 +345,46 @@ export function useAppointmentPage() {
       loadCitas()
     }
   }, [idClinica, idSucursalFiltro, estadoFiltro, loadCitas])
+
+  const loadCitasRealtimeRef = useRef(loadCitas)
+  useEffect(() => {
+    loadCitasRealtimeRef.current = loadCitas
+  }, [loadCitas])
+
+  useEffect(() => {
+    if (!idClinica || role === "Unknown") {
+      return
+    }
+
+    let active = true
+
+    doctorRealtimeService
+      .connect(
+        undefined,
+        async () => {
+          if (!active) return
+          await loadCitasRealtimeRef.current()
+        }
+      )
+      .catch(() => {})
+
+    return () => {
+      active = false
+      doctorRealtimeService.disconnect().catch(() => {})
+    }
+  }, [idClinica, role])
+
+  useEffect(() => {
+    if (!idClinica) {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      loadCitas().catch(() => {})
+    }, 10000)
+
+    return () => window.clearInterval(interval)
+  }, [idClinica, loadCitas])
 
   const especialidadesDisponiblesCrear = useMemo(
     () => especialidadesPorSucursal.filter((item) => item.idSucursal === idSucursalCrear),
@@ -431,6 +501,60 @@ export function useAppointmentPage() {
     }
   }
 
+  const registrarPacienteRapido = async () => {
+    if (!canCreateInternal) {
+      showToast("No tienes permisos para registrar pacientes", "warning")
+      return
+    }
+
+    const nombres = formNuevoPaciente.nombres.trim()
+    const apellidos = formNuevoPaciente.apellidos.trim()
+    const correo = formNuevoPaciente.correo.trim().toLowerCase()
+    const telefono = formNuevoPaciente.telefono?.trim() ?? ""
+    const fechaNacimiento = formNuevoPaciente.fechaNacimiento?.trim() || undefined
+
+    if (!idClinica || nombres.length < 2 || apellidos.length < 2 || !correo.includes("@")) {
+      showToast("Completa nombres, apellidos y correo válido para registrar el paciente", "warning")
+      return
+    }
+
+    setCrearPacienteLoading(true)
+    setError(null)
+
+    try {
+      const creado = await pacienteService.crear(idClinica, {
+        nombres,
+        apellidos,
+        correo,
+        telefono,
+        fechaNacimiento,
+        idEspecialidad: idEspecialidadCrear || undefined,
+      })
+
+      setPacientes((prev) => {
+        const next = [...prev.filter((p) => p.id !== creado.id), creado]
+        next.sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto))
+        return next
+      })
+      setIdPacienteCrear(creado.id)
+      setFormNuevoPaciente({
+        nombres: "",
+        apellidos: "",
+        correo: "",
+        telefono: "",
+        fechaNacimiento: "",
+      })
+
+      showToast("Paciente registrado y seleccionado para la cita", "success")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo registrar el paciente"
+      setError(message)
+      showToast(message, "error")
+    } finally {
+      setCrearPacienteLoading(false)
+    }
+  }
+
   const asignarDoctor = async (idCita: number, idDoctor?: number) => {
     setAsignarLoading(true)
     setError(null)
@@ -477,26 +601,19 @@ export function useAppointmentPage() {
     await cambiarEstado(idCita, 5, "Paciente presente en recepción")
   }
 
-  const pasarAConsulta = async (idCita: number, idDoctorAsignado?: number) => {
-    const cita = citas.find((item) => item.id === idCita)
-    const idDoctorFinal = idDoctorAsignado ?? cita?.idDoctor
-
-    if (!idDoctorFinal) {
-      showToast("Asigna un doctor antes de pasar la cita a consulta", "warning")
+  const pasarAConsulta = async (idCita: number) => {
+    if (!(role === "Admin" || role === "Doctor")) {
+      showToast("El pase a consulta lo realiza el doctor desde su cola", "warning")
       return
     }
 
-    const doctorAsignado = doctores.find((doctor) => doctor.id === idDoctorFinal)
-    const nombreDoctor = doctorAsignado?.nombreCompleto ?? `Doctor #${idDoctorFinal}`
+    const cita = citas.find((item) => item.id === idCita)
+    const nombreEspecialidad = cita?.nombreEspecialidad || "especialidad asignada"
 
     try {
-      if (!cita?.idDoctor || cita.idDoctor !== idDoctorFinal) {
-        await citaService.asignarDoctor(idCita, { idDoctor: idDoctorFinal })
-      }
-
-      await cambiarEstado(idCita, 6, `Lo atenderá ${nombreDoctor}`)
+      await cambiarEstado(idCita, 6, `Paciente enviado a consulta por ${nombreEspecialidad}`)
     } catch (err) {
-      const message = err instanceof Error ? err.message : "No se pudo asignar doctor y pasar a consulta"
+      const message = err instanceof Error ? err.message : "No se pudo pasar la cita a consulta"
       setError(message)
       showToast(message, "error")
     }
@@ -505,12 +622,12 @@ export function useAppointmentPage() {
   const registrarConsultaPorCita = async (idCitaObjetivo: number) => {
     if (!canRegisterConsult) {
       showToast("No tienes permisos para registrar consultas", "warning")
-      return
+      return false
     }
 
     if (!idCitaObjetivo || diagnostico.trim().length < 3) {
       showToast("Selecciona una cita y agrega un diagnóstico válido", "warning")
-      return
+      return false
     }
 
     setConsultaLoading(true)
@@ -533,10 +650,12 @@ export function useAppointmentPage() {
       setNotasMedicas("")
       await loadCitas()
       setIdCitaDoctorActiva(0)
+      return true
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo registrar la consulta"
       setError(message)
       showToast(message, "error")
+      return false
     } finally {
       setConsultaLoading(false)
     }
@@ -608,13 +727,44 @@ export function useAppointmentPage() {
     }
   }
 
+  const reprogramarCita = async (idCita: number, nuevaFechaHoraInicioPlan: string, motivo?: string) => {
+    if (!canCreateInternal) {
+      showToast("No tienes permisos para reprogramar citas", "warning")
+      return
+    }
+
+    if (!idCita || !nuevaFechaHoraInicioPlan) {
+      showToast("Selecciona una fecha y hora válida para reprogramar", "warning")
+      return
+    }
+
+    setEstadoLoadingId(idCita)
+    setError(null)
+
+    try {
+      await citaService.reprogramar(idCita, {
+        nuevaFechaHoraInicioPlan: toIsoDateTime(nuevaFechaHoraInicioPlan),
+        motivo: motivo?.trim(),
+      })
+
+      showToast("Cita reprogramada correctamente", "success")
+      await loadCitas()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "No se pudo reprogramar la cita"
+      setError(message)
+      showToast(message, "error")
+    } finally {
+      setEstadoLoadingId(null)
+    }
+  }
+
   const citasSinConsulta = useMemo(
     () => citas.filter((cita) => !cita.consultaMedica && cita.estado !== 3),
     [citas]
   )
 
   const citasDoctorEnConsulta = useMemo(() => {
-    if (!(role === "Doctor" || role === "Nutricionista" || role === "Fisioterapeuta")) {
+    if (role !== "Doctor") {
       return []
     }
 
@@ -624,14 +774,16 @@ export function useAppointmentPage() {
   }, [citas, role, idUsuario])
 
   const colaDoctorPendiente = useMemo(() => {
-    if (!(role === "Doctor" || role === "Nutricionista" || role === "Fisioterapeuta")) {
+    if (role !== "Doctor") {
       return []
     }
 
     return [...citas]
-      .filter((cita) => cita.estado === 5 && !cita.consultaMedica && cita.idDoctor === idUsuario)
+      .filter((cita) => cita.estado === 5 && !cita.consultaMedica)
+      .filter((cita) => !idEspecialidadUsuario || cita.idEspecialidad === idEspecialidadUsuario)
+      .filter((cita) => !cita.idDoctor || cita.idDoctor === idUsuario)
       .sort((a, b) => new Date(a.fechaHoraInicioPlan).getTime() - new Date(b.fechaHoraInicioPlan).getTime())
-  }, [citas, role, idUsuario])
+  }, [citas, role, idUsuario, idEspecialidadUsuario])
 
   const siguienteCitaDoctor = useMemo(
     () => colaDoctorPendiente[0] ?? null,
@@ -639,7 +791,7 @@ export function useAppointmentPage() {
   )
 
   const tomarSiguientePacienteDoctor = async () => {
-    if (!(role === "Doctor" || role === "Nutricionista" || role === "Fisioterapeuta")) {
+    if (role !== "Doctor") {
       showToast("Solo un doctor puede tomar el siguiente paciente", "warning")
       return
     }
@@ -714,7 +866,7 @@ export function useAppointmentPage() {
   }, [cargarHistorialPaciente, citas])
 
   const guardarHistorialPaciente = async () => {
-    if (!(role === "Admin" || role === "Doctor" || role === "Nutricionista" || role === "Fisioterapeuta")) {
+    if (!(role === "Admin" || role === "Doctor")) {
       showToast("No tienes permisos para guardar historial clínico", "warning")
       return
     }
@@ -748,14 +900,17 @@ export function useAppointmentPage() {
   return {
     loading,
     error,
+    idClinica,
     role,
     idUsuario,
+    idEspecialidadUsuario,
     idSucursalUsuario,
     canCreateInternal,
     canRegisterConsult,
     canFilterBySucursal,
     citas,
     citasTodas,
+    actividadCitas,
     sucursales,
     pacientes,
     servicios,
@@ -765,6 +920,7 @@ export function useAppointmentPage() {
     estadoFiltro,
     setEstadoFiltro,
     createLoading,
+    crearPacienteLoading,
     idSucursalCrear,
     setIdSucursalCrear,
     idEspecialidadCrear,
@@ -775,6 +931,9 @@ export function useAppointmentPage() {
     cuposDisponiblesCrear,
     idPacienteCrear,
     setIdPacienteCrear,
+    formNuevoPaciente,
+    setFormNuevoPaciente,
+    registrarPacienteRapido,
     idDoctorCrear,
     setIdDoctorCrear,
     doctoresDisponiblesCrear,
@@ -811,6 +970,7 @@ export function useAppointmentPage() {
     registrarConsultaPorCita,
     cerrarProcesoRecepcion,
     agendarSeguimiento,
+    reprogramarCita,
     citasDoctorEnConsulta,
     siguienteCitaDoctor,
     tomandoSiguienteDoctor,

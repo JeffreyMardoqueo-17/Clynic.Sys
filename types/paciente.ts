@@ -32,6 +32,16 @@ export interface UpdatePacienteDto {
   telefono?: string
   correo: string
   fechaNacimiento?: string
+  idEspecialidad?: number
+}
+
+export interface CreatePacienteDto {
+  nombres: string
+  apellidos: string
+  telefono?: string
+  correo: string
+  fechaNacimiento?: string
+  idEspecialidad?: number
 }
 
 export interface UpdateHistorialClinicoDto {

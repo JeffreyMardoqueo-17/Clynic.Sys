@@ -34,6 +34,13 @@ export interface RolDto {
   idSucursal?: number | null;
 }
 
+export interface CreateRolDto {
+  idClinica: number;
+  idSucursal: number;
+  nombre: string;
+  descripcion?: string;
+}
+
 export interface EspecialidadDto {
   id: number;
   idClinica?: number | null;
@@ -47,6 +54,25 @@ export interface EspecialidadSucursalDto {
   idSucursal: number;
   idEspecialidad: number;
   nombreEspecialidad: string;
+  activa: boolean;
+}
+
+export interface CreateEspecialidadDto {
+  idClinica: number;
+  nombre: string;
+  descripcion?: string;
+}
+
+export interface AsignarEspecialidadDoctorSucursalesDto {
+  idClinica: number;
+  idEspecialidad: number;
+  idsSucursales: number[];
+}
+
+export interface ActualizarEstadoEspecialidadDoctorSucursalesDto {
+  idClinica: number;
+  idEspecialidad: number;
+  idsSucursales: number[];
   activa: boolean;
 }
 

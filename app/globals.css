@@ -20,7 +20,7 @@
     --color-card-foreground: var(--card-foreground);
     --color-popover: var(--popover);
     --color-popover-foreground: var(--popover-foreground);
-    --color-primary: var(--primary);
+    --color-primary: var(--primary-solid);
     --color-primary-foreground: var(--primary-foreground);
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
@@ -67,9 +67,10 @@
     --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.24 0.02 255);
 
-  /* Solid blue buttons */
-  --primary: oklch(0.55 0.16 255);
-    --primary-foreground: oklch(1 0 0);
+  /* Primary token is gradient; keep a solid companion for text/border/ring math */
+  --primary: linear-gradient(120deg, #1e3a8a 0%, #2563eb 100%);
+  --primary-solid: #0b0921;
+  --primary-foreground: oklch(1 0 0);
 
   /* Keep secondary/ghost neutral (no aqua fills) */
   --secondary: oklch(0.97 0 0);
@@ -90,7 +91,7 @@
   --ring: oklch(0.58 0.18 255);
 
   /* Charts: keep palette away from aqua; use blue + green + warm accents */
-  --chart-1: oklch(0.55 0.16 255); /* blue */
+  --chart-1: #0b0921; /* blue */
   --chart-2: oklch(0.62 0.14 265); /* indigo */
   --chart-3: oklch(0.66 0.14 155); /* green */
   --chart-4: oklch(0.75 0.16 72);
@@ -107,53 +108,54 @@
 }
 
 /* ===============================
-   🌙 DARK MODE (sin cambios)
+   🌙 DARK MODE
 ================================= */
 .dark {
   --brand-gradient: linear-gradient(120deg, #1d4ed8 0%, #3b82f6 100%);
-  --brand-gradient-strong: linear-gradient(120deg, #2563eb 0%, #3b82f6 52%, #60a5fa 100%);
-  --background: oklch(0.2 0.03 246);
-  --foreground: oklch(0.95 0.02 240);
+  --brand-gradient-strong: linear-gradient(120deg, #2563eb 0%, #60a5fa 100%);
+  --background: #08071a;
+  --foreground: #e9f1ff;
 
-  --card: oklch(0.25 0.04 244);
-  --card-foreground: oklch(0.95 0.02 240);
+  --card: #0b0f24;
+  --card-foreground: #e9f1ff;
 
-  --popover: oklch(0.25 0.04 244);
-  --popover-foreground: oklch(0.95 0.02 240);
+  --popover: #0b0f24;
+  --popover-foreground: #e9f1ff;
 
-  --primary: oklch(0.7 0.14 230);
-  --primary-foreground: oklch(0.18 0.03 244);
+  --primary: linear-gradient(120deg, #1d4ed8 0%, #3b82f6 100%);
+  --primary-solid: #3b82f6;
+  --primary-foreground: #f8fbff;
 
   /* Keep surfaces neutral (avoid teal/aqua) */
-  --secondary: oklch(0.28 0.01 255);
-  --secondary-foreground: oklch(0.95 0.02 240);
+  --secondary: #0f1630;
+  --secondary-foreground: #e9f1ff;
 
-  --muted: oklch(0.28 0.01 255);
-  --muted-foreground: oklch(0.78 0.02 255);
+  --muted: #0d142c;
+  --muted-foreground: #9fb1d6;
 
-  --accent: oklch(0.28 0.01 255);
-  --accent-foreground: oklch(0.95 0.02 240);
+  --accent: #142443;
+  --accent-foreground: #e9f1ff;
 
-  --destructive: oklch(0.72 0.22 24);
+  --destructive: #ef4444;
 
-  --border: oklch(0.4 0 0);
-  --input: oklch(0.4 0 0);
-  --ring: oklch(0.72 0.16 255);
+  --border: #27406a;
+  --input: #27406a;
+  --ring: #60a5fa;
 
-  --chart-1: oklch(0.7 0.14 230);
-  --chart-2: oklch(0.74 0.14 265);
-  --chart-3: oklch(0.8 0.17 148);
-  --chart-4: oklch(0.81 0.16 72);
-  --chart-5: oklch(0.75 0.23 26);
+  --chart-1: #60a5fa;
+  --chart-2: #38bdf8;
+  --chart-3: #22d3ee;
+  --chart-4: #818cf8;
+  --chart-5: #93c5fd;
 
-  --sidebar: #060511;
-  --sidebar-foreground: oklch(0.95 0.01 240);
-  --sidebar-primary: #060511;
-  --sidebar-primary-foreground: oklch(0.98 0.005 240);
-  --sidebar-accent: #132849;
-  --sidebar-accent-foreground: oklch(0.98 0.005 240);
-  --sidebar-border: #1f3b66;
-  --sidebar-ring: oklch(0.7 0.1 250);
+  --sidebar: #0b0921;
+  --sidebar-foreground: #e9f1ff;
+  --sidebar-primary: #0b0921;
+  --sidebar-primary-foreground: #f8fbff;
+  --sidebar-accent: #17305a;
+  --sidebar-accent-foreground: #e9f1ff;
+  --sidebar-border: #1f4f8d;
+  --sidebar-ring: #60a5fa;
 }
 
 /* ===============================
@@ -653,9 +655,9 @@
   .calendar-shell .rbc-toolbar button.rbc-active,
   .calendar-shell .rbc-toolbar button:focus,
   .calendar-shell .rbc-toolbar button:hover {
-    background: color-mix(in oklch, var(--primary) 14%, var(--background));
+    background: color-mix(in oklch, var(--primary-solid) 14%, var(--background));
     color: var(--foreground);
-    border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+    border-color: color-mix(in oklch, var(--primary-solid) 45%, var(--border));
   }
 
   .calendar-shell .rbc-time-content,
@@ -755,19 +757,19 @@
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 1rem;
-    color: var(--primary);
+    color: var(--primary-solid);
   }
 
   .clinic-heading {
-    color: var(--primary);
+    color: var(--primary-solid);
   }
 
   .clinic-subtle {
-    color: color-mix(in oklch, var(--primary) 45%, var(--foreground));
+    color: color-mix(in oklch, var(--primary-solid) 45%, var(--foreground));
   }
 
   .clinic-accent-line {
-    border-left: 4px solid var(--primary);
+    border-left: 4px solid var(--primary-solid);
     background: var(--card);
   }
 
@@ -843,6 +845,48 @@
   .hc-gradient-border {
     border-color: color-mix(in oklch, #2563eb 32%, var(--border));
     box-shadow: 0 10px 28px rgba(30, 64, 175, 0.08);
+  }
+
+  .dark .hc-gradient-border {
+    border-color: color-mix(in oklch, var(--primary-solid) 34%, var(--border));
+    box-shadow: none;
+  }
+
+  .reception-board-shell [data-slot="card"] {
+    border-color: color-mix(in oklch, var(--primary-solid) 30%, var(--border));
+    background: var(--card);
+    box-shadow: 0 12px 24px rgba(6, 12, 30, 0.22);
+  }
+
+  .dark .reception-board-shell [data-slot="card"] {
+    border-color: color-mix(in oklch, var(--primary-solid) 40%, var(--border));
+    background: #08071a;
+    box-shadow:
+      0 12px 26px rgba(2, 6, 20, 0.55);
+  }
+
+  .dark .reception-board-shell header.rounded-2xl {
+    background: #08071a;
+    border-color: color-mix(in oklch, var(--primary-solid) 38%, var(--border));
+  }
+
+  .dark .reception-board-shell .bg-linear-to-r {
+    background-image: none;
+  }
+
+  button.bg-primary,
+  a.bg-primary,
+  [role="button"].bg-primary {
+    @apply text-white;
+    background: var(--primary);
+    border-color: transparent;
+    box-shadow: 0 12px 28px rgba(29, 78, 216, 0.28);
+  }
+
+  button.bg-primary:hover,
+  a.bg-primary:hover,
+  [role="button"].bg-primary:hover {
+    background: var(--brand-gradient-strong);
   }
 }
 

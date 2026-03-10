@@ -1,5 +1,6 @@
 import { getApiErrorMessage, getApiUrl } from "@/services/api.utils"
 import {
+  CreatePacienteDto,
   HistorialClinicoResponseDto,
   PacienteResponseDto,
   UpdateHistorialClinicoDto,
@@ -7,6 +8,23 @@ import {
 } from "@/types/paciente"
 
 export const pacienteService = {
+  async crear(idClinica: number, data: CreatePacienteDto): Promise<PacienteResponseDto> {
+    const response = await fetch(`${getApiUrl()}/api/Pacientes/clinica/${idClinica}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      throw new Error(await getApiErrorMessage(response, "No se pudo registrar el paciente"))
+    }
+
+    return response.json()
+  },
+
   async obtenerPorClinica(idClinica: number, busqueda?: string): Promise<PacienteResponseDto[]> {
     const params = new URLSearchParams()
     if (busqueda?.trim()) {
