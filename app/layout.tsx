@@ -49,10 +49,10 @@ export const metadata: Metadata = {
       "Plataforma SaaS para centros clinicos privados. Gestiona citas, pacientes, historial clinico, sucursales y equipos medicos desde un solo panel.",
     images: [
       {
-        url: "/system/Dashboard_Adminstracion.png",
+        url: "/system/Dashboard_resepcion.png",
         width: 1280,
         height: 720,
-        alt: "Clynic System — Panel administrativo",
+        alt: "Clynic System — Panel Resepcion",
       },
     ],
   },
